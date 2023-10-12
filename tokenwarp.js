@@ -1,7 +1,7 @@
 'use strict';
 
 Hooks.on('preUpdateToken', (tdoc, changes, options, userId) => {
-  if (!game.users.get(userId).isGM || (!changes.x && !changes.y)) return;
+  if (!game.users.get(userId).isGM || (!changes.x && !changes.y) || options.animate === false) return;
   const sourceCenter = tdoc.object.center;
   const targetPos = {x: changes.x ??= tdoc.x, y: changes.y ??= tdoc.y};
   const offset = {x: sourceCenter.x - tdoc.x, y: sourceCenter.y - tdoc.y};
