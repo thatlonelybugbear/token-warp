@@ -1,7 +1,7 @@
 'use strict';
 
 Hooks.on('preUpdateToken', (tdoc, changes, options, userId) => {
-  if (!game.users.get(userId) || (!changes.x && !changes.y)) return;
+  if (!game.users.get(userId).isGM || (!changes.x && !changes.y)) return;
   const sourcePos = {x: tdoc.x, y: tdoc.y};
   const targetPos = {x: changes.x, y: changes.y};
   if (!targetPos.x) targetPos.x = sourcePos.x;
