@@ -2,10 +2,10 @@
 
 Hooks.on('preUpdateToken', (tdoc, changes, options, userId) => {
   if (!game.users.get(userId).isGM || (!changes.x && !changes.y)) return;
-  const sourcePos = {x: tdoc.x, y: tdoc.y};
-  const targetPos = {x: changes.x, y: changes.y};
-  if (!targetPos.x) targetPos.x = sourcePos.x;
-  if (!targetPos.y) targetPos.y = sourcePos.y;
-  const ray = new Ray(sourcePos, targetPos);
+  const sourceCenter = tdoc.object.center;
+  const targetPos = {x: changes.x ??= tdoc.x, y: changes.y ??= tdoc.y};
+  const offset = {x: sourceCenter.x - tdoc.x, y: sourceCenter.y - tdoc.y};
+  const targetCenter = {x: targetPos.x + offset.x, y: targetPos.y + offset.y};
+  const ray = new Ray(sourceCenter, targetCenter);
   if (CONFIG.Canvas.polygonBackends.move.testCollision(ray.A,ray.B,{mode:'any',type: 'move'})) options.animate = false;
 });
