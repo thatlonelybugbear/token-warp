@@ -23,8 +23,8 @@ export default class Settings {
       Constants.MODULE_ID,
       Settings.DEFAULT_TOKEN_ANIMATION_SWITCH,
       {
-        name: 'Token movement animation switch (ON/OFF).',
-        hint: 'When on, the tokens appear to their destinations instantly (no token movement animations).',
+        name: 'Disable token movement by default.',
+        hint: 'When checked, the tokens appear to their destinations instantly (no token movement animations).',
         scope: 'world',
         config: true,
         default: false,
@@ -33,8 +33,8 @@ export default class Settings {
     );
 
     game.settings.register(Constants.MODULE_ID, Settings.EXCLUDED_SCENES, {
-      name: 'Excluded scenes. Token animations always ON.',
-      hint: 'Scene UUIDs (or IDs) separated by semicolons (;). Movement animations will be always On these scenes (configure scene and right click on the small icon to the right of the name in the title bar).',
+      name: 'Excluded scenes. Overrides disable movement for specific Scenes.',
+      hint: 'Scene UUIDs (or IDs) separated by semicolons (;). Movement animations will always be displayed on these scenes. Right click on a scene on the navigation bar, configure scene and click on the small icon to the right of the name in the title bar. Right click for Scene.UUID, left click for Scene.ID.',
       scope: 'world',
       config: true,
       type: String,
@@ -45,7 +45,7 @@ export default class Settings {
       Settings.WALLS_CANCEL_TOKEN_ANIMATION_GM,
       {
         name: 'Walls cancel token movement animation',
-        hint: 'When on, scene walls will automatically force the token movement to be instant. This setting helps GMs to not reveal map areas not meant to be seen by their players (will not have any effect if the token movement animation is OFF).',
+        hint: 'When checked, draggin tokens over scene walls will automatically force the token movement to be instant. This setting helps GMs to not reveal map areas not meant to be seen by their players (will not have any effect if the token movement animation is OFF).',
         scope: 'world',
         config: true,
         default: true,
