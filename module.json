@@ -2,7 +2,7 @@
   "id": "tokenwarp",
   "title": "Token Warp",
   "description": "A small module for Foundry VTT, helping GMs to avoid revealing their maps by automatically removing tokens movement animation when going through walls.",
-  "version": "1.0.0",
+  "version": "11.0.0",
   "authors": [
     {
       "name": "thatlonelybugbear",
@@ -15,7 +15,7 @@
     "minimum": "11",
     "verified": "11.313"
   },
-  "esmodules": ["tokenwarp.js"],
+  "esmodules": ["setup.js"],
   "relationships": {
     "systems": [
       {
@@ -34,5 +34,5 @@
   "url": "https://github.com/thatlonelybugbear/token-warp",
   "licence": "https://github.com/thatlonelybugbear/token-warp/blob/main/LICENSE",
   "manifest": "https://github.com/thatlonelybugbear/token-warp/releases/latest/download/module.json",
-  "download": "https://github.com/thatlonelybugbear/token-warp/releases/download/v1.0.0/module.zip"
+  "download": "https://github.com/thatlonelybugbear/token-warp/releases/download/v11.0.0/module.zip"
 }
