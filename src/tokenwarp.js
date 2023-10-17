@@ -4,6 +4,13 @@ const settings = new Settings();
 
 /*  Functions */
 export function _preUpdateToken(tdoc, changes, options, userId) {
+  if (!game.users.get(userId).isGM && settings.movementSpeed) {
+    return foundry.utils.setProperty(
+      options,
+      'animation.movementSpeed',
+      settings.movementSpeed
+    );
+  }
   if (
     !game.users.get(userId).isGM ||
     (!changes.x && !changes.y) ||
