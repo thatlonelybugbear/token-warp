@@ -1,3 +1,6 @@
+## v11.0.1 <hl>
+- Player clients should respect movement animation speed too...
+
 ## v11.0.0 <hl>
 - Initial release of Token Warp!
   - Settings for movement animation default on/off,
