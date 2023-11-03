@@ -33,7 +33,7 @@
   "bugs": "https://github.com/thatlonelybugbear/token-warp/issues",
   "url": "https://github.com/thatlonelybugbear/token-warp",
   "licence": "https://github.com/thatlonelybugbear/token-warp/blob/main/LICENSE",
-  "manifest": "https://github.com/thatlonelybugbear/token-warp/master/module.json",
+  "manifest": "https://raw.githubusercontent.com/thatlonelybugbear/token-warp/master/module.json",
   "download": "https://github.com/thatlonelybugbear/token-warp/archive/refs/heads/master.zip",
   "changelog": "https://github.com/thatlonelybugbear/token-warp/blob/main/Changelog.md"
 }
