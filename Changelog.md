@@ -1,3 +1,7 @@
+## v11.0.1.1 <hl>
+- Hotfix for excluded scenes being `undefined`
+- Changed the manifest url to make it easier to release hotfixes
+
 ## v11.0.1 <hl>
 - Player clients should respect movement animation speed too...
 
