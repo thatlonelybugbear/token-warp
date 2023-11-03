@@ -84,7 +84,7 @@ export default class Settings {
       Constants.MODULE_ID,
       Settings.EXCLUDED_SCENES
     );
-    if (!sceneString.trim().length) return false;
+    if (!sceneString?.trim().length) return false;
     const sceneArray = sceneString
       .trim()
       .split(';')
