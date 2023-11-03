@@ -1,5 +1,5 @@
 # Token Warp
-![](https://img.shields.io/badge/Foundry-v11.314-informational)  ![](https://img.shields.io/badge/Dnd5e-v2.3.1-informational)  ![GitHub Releases](https://img.shields.io/github/downloads/thatlonelybugbear/token-warp/total)
+![](https://img.shields.io/badge/Foundry-v11.314-informational)  ![](https://img.shields.io/badge/Dnd5e-v2.0.1+-informational)  ![GitHub Releases](https://img.shields.io/github/downloads/thatlonelybugbear/token-warp/total)
 ![GitHub Releases](https://img.shields.io/github/downloads/thatlonelybugbear/token-warp/latest/total)
 
 <hl>
