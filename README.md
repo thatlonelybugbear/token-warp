@@ -1,5 +1,6 @@
 # Token Warp
 ![](https://img.shields.io/badge/Foundry-v11.314-informational)  ![](https://img.shields.io/badge/Dnd5e-v2.3.1-informational)  ![GitHub Releases](https://img.shields.io/github/downloads/thatlonelybugbear/token-warp/total)
+![GitHub Releases](https://img.shields.io/github/downloads/thatlonelybugbear/token-warp/latest/total)
 
 <hl>
 A small module for Foundry VTT, which in its initial stage, just helps GMs to avoid revealing their maps by automatically canceling the dragged tokens' movement animation, when there is a wall in their path.
