@@ -6,6 +6,7 @@ export default class Settings {
   static DEFAULT_TOKEN_ANIMATION_SWITCH = 'defaultTokenAnimationSwitch';
   static EXCLUDED_SCENES = 'excludedScenes';
   static DEFAULT_TOKEN_ANIMATION_SPEED = 'defaultTokenAnimationSpeed';
+  static BYPASS_MONKS_ACTIVE_TILE_TRIGGERS = 'shouldBypassMonksActiveTiles';
 
   registerSettings() {
     this._registerWorldSettings();
@@ -70,6 +71,21 @@ export default class Settings {
         },
       }
     );
+
+     if (game.modules.get('monks-active-tiles')?.active) {
+        game.settings.register(
+          Constants.MODULE_ID,
+          Settings.BYPASS_MONKS_ACTIVE_TILE_TRIGGERS,
+          {
+            name: 'Should no movement animation options bypass MATT?',
+            hint: 'When checked, no movement animation options of Token Warp will NOT trigger any Monks Active Tile Triggers.',
+            scope: 'world',
+            config: true,
+            default: false,
+            type: Boolean,
+          }
+        );
+     }
   }
 
   get movementSwitch() {
