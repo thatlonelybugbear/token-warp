@@ -1,6 +1,6 @@
 'use strict';
 
-import Settings from './src/settings.js';
+import Settings from './settings.js';
 import { _preUpdateToken, _wallsBlockMovement } from './src/tokenwarp.js';
 
 Hooks.once('init', () => {
