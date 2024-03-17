@@ -16,18 +16,7 @@
     "verified": "11.315"
   },
   "esmodules": ["src/setup.js"],
-  "relationships": {
-    "systems": [
-      {
-        "id": "dnd5e",
-        "type": "system",
-        "compatibility": {
-          "minimum": "2.0.1",
-          "verified": "3.0.4"
-        }
-      }
-    ]
-  },
+  "relationships": { },
   "languages": [
     {
       "lang": "en",
