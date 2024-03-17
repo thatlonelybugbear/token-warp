@@ -1,5 +1,6 @@
 ## v11.1.1 <hl>
 - Add translation file.
+- Bump compatibility to Foundry v11.315 and dnd5e 3.0.4
 
 ## v11.0.1.1 <hl>
 - Hotfix for excluded scenes being `undefined`
