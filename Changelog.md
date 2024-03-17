@@ -1,3 +1,6 @@
+## v11.1.1 <hl>
+- Add translation file.
+
 ## v11.0.1.1 <hl>
 - Hotfix for excluded scenes being `undefined`
 - Changed the manifest url to make it easier to release hotfixes
