@@ -13,7 +13,7 @@
   ],
   "compatibility": {
     "minimum": "11",
-    "verified": "11.313"
+    "verified": "11.315"
   },
   "esmodules": ["setup.js"],
   "relationships": {
@@ -21,10 +21,9 @@
       {
         "id": "dnd5e",
         "type": "system",
-        "manifest": "https://raw.githubusercontent.com/foundryvtt/dnd5e/master/system.json",
         "compatibility": {
           "minimum": "2.0.1",
-          "verified": "2.3.1"
+          "verified": "3.0.4"
         }
       }
     ]
@@ -32,8 +31,8 @@
   "flags": { "allowbugreporter": true },
   "bugs": "https://github.com/thatlonelybugbear/token-warp/issues",
   "url": "https://github.com/thatlonelybugbear/token-warp",
-  "licence": "https://github.com/thatlonelybugbear/token-warp/blob/main/LICENSE",
+  "licence": "https://raw.githubusercontent.com/thatlonelybugbear/token-warp/main/LICENSE",
   "manifest": "https://raw.githubusercontent.com/thatlonelybugbear/token-warp/master/module.json",
   "download": "https://github.com/thatlonelybugbear/token-warp/archive/refs/heads/master.zip",
-  "changelog": "https://github.com/thatlonelybugbear/token-warp/blob/main/Changelog.md"
+  "changelog": "https://raw.githubusercontent.com/thatlonelybugbear/token-warp/main/Changelog.md"
 }
