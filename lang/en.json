@@ -1,0 +1,10 @@
+{
+  "TOKENWARP.WallsCancelTokenAnimationName": "Walls cancel token movement animation.",
+  "TOKENWARP.WallsCancelTokenAnimationHint": "When checked and the GM drags tokens over scene walls, the tokens appear at their destinations instantly (no token movement animations). This setting helps GMs to not reveal map areas not meant to be seen by their players (will not have any effect if the token movement animation is OFF).",
+  "TOKENWARP.DefaultTokenAnimationSwitchName": "No token movement animations by default.",
+  "TOKENWARP.DefaultTokenAnimationSwitchHint": "When checked, the tokens appear at their destinations instantly (no token movement animations).",
+  "TOKENWARP.ExcludedScenesName": "Excluded Scenes.",
+  "TOKENWARP.ExcludedScenesHint": "Add Scene UUIDs (or IDs) separated by semicolons (;). Token movement animations always ON.",
+  "TOKENWARP.DefaultTokenAnimationSpeedName": "Token movement animation speed.",
+  "TOKENWARP.DefaultTokenAnimationSpeedHint": "Default is 6. Foundry v10 was using a default of 12."
+}
