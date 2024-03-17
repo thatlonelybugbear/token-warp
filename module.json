@@ -28,7 +28,18 @@
       }
     ]
   },
-  "flags": { "allowbugreporter": true },
+  "languages": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json",
+      "flags": {}
+    }
+  ],
+  "flags": {
+    "hotReload": { "paths": ["lang/en.json"] },
+    "allowbugreporter": true
+  },
   "bugs": "https://github.com/thatlonelybugbear/token-warp/issues",
   "url": "https://github.com/thatlonelybugbear/token-warp",
   "licence": "https://raw.githubusercontent.com/thatlonelybugbear/token-warp/main/LICENSE",
