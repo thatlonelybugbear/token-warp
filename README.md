@@ -15,7 +15,4 @@ There are also settings for removing by default the movement animation from all 
 
 If the setting for no token movement animations is selected, you can provide scene UUIDs or scene IDs, for specific scenes to be excluded.
 
-![wallsBlockMove](https://github.com/thatlonelybugbear/token-warp/assets/7237090/cd6a9677-5cb2-494b-ad82-b2b735911f6e)
-
-
 ![tokenwarp_functionality](https://github.com/thatlonelybugbear/token-warp/assets/7237090/4937e939-9964-44ff-9c66-bcc27066711e)
