@@ -4,34 +4,28 @@ const settings = new Settings();
 
 /*  Functions */
 export function _preUpdateToken(tdoc, changes, options, userId) {
-  if (!game.users.get(userId).isGM && settings.movementSpeed) {
-    return foundry.utils.setProperty(
-      options,
-      'animation.movementSpeed',
-      settings.movementSpeed
-    );
-  }
-  if (
-    !game.users.get(userId).isGM ||
-    (!changes.x && !changes.y) ||
-    options.animate === false
-  )
-    return;
-  if (settings.movementSwitch && !settings.excludedScene) {
-    options.animate = false;
-    return true;
-  }
-  if (_wallsBlockMovement(tdoc, changes)) {
-    options.animate = false;
-    return true;
-  }
-  if (settings.movementSpeed)
-    foundry.utils.setProperty(
-      options,
-      'animation.movementSpeed',
-      settings.movementSpeed
-    );
-  if (settings.excludedScene && !_wallsBlockMovement(tdoc, changes)) return true;
+	if ((changes.x || changes.y) && options.animate !== false) {
+		if (settings.movementSpeed)
+			foundry.utils.setProperty(
+				options,
+				'animation.movementSpeed',
+				settings.movementSpeed
+			);
+		if (
+			settings.movementSwitch &&
+			!settings.excludedScene &&
+			!options.rulerSegment //force Elevation ruler compatibility. If that parameter exists, let ER handle it.
+		)
+			options.animate = false;
+		if (!game.users.get(userId).isGM) return true;
+		if (
+			_wallsBlockMovement(tdoc, changes) &&
+			!settings.excludedScene &&
+			!options.rulerSegment //force Elevation ruler compatibility. If that parameter exists, let ER handle it.
+		)
+			options.animate = false;
+	}
+	return true;
 }
 
 export function _wallsBlockMovement(tdoc, changes) {
