@@ -12,16 +12,13 @@ export function _preUpdateToken(tdoc, changes, options, userId) {
 				settings.movementSpeed
 			);
 		if (
-			settings.movementSwitch &&
-			!settings.excludedScene &&
-			!options.rulerSegment //force Elevation ruler compatibility. If that parameter exists, let ER handle it.
+			options.rulerSegment || //force Elevation ruler compatibility. If that parameter exists, let ER handle it.
+			settings.excludedScene
 		)
-			options.animate = false;
-		if (!game.users.get(userId).isGM) return true;
+			return true;
 		if (
-			_wallsBlockMovement(tdoc, changes) &&
-			!settings.excludedScene &&
-			!options.rulerSegment //force Elevation ruler compatibility. If that parameter exists, let ER handle it.
+			settings.movementSwitch ||
+			(game.users.get(userId).isGM && _wallsBlockMovement(tdoc, changes))
 		)
 			options.animate = false;
 	}
@@ -29,17 +26,17 @@ export function _preUpdateToken(tdoc, changes, options, userId) {
 }
 
 export function _wallsBlockMovement(tdoc, changes) {
-  if (!settings.wallBlock) return false;
-  const sourceCenter = tdoc.object.center;
-  const targetPos = { x: (changes.x ??= tdoc.x), y: (changes.y ??= tdoc.y) };
-  const offset = { x: sourceCenter.x - tdoc.x, y: sourceCenter.y - tdoc.y };
-  const targetCenter = { x: targetPos.x + offset.x, y: targetPos.y + offset.y };
-  const ray = new Ray(sourceCenter, targetCenter);
-  if (
-    CONFIG.Canvas.polygonBackends.move.testCollision(ray.A, ray.B, {
-      mode: 'any',
-      type: 'move',
-    })
-  )
-    return true;
+	if (!settings.wallBlock) return false;
+	const sourceCenter = tdoc.object.center;
+	const targetPos = { x: (changes.x ??= tdoc.x), y: (changes.y ??= tdoc.y) };
+	const offset = { x: sourceCenter.x - tdoc.x, y: sourceCenter.y - tdoc.y };
+	const targetCenter = { x: targetPos.x + offset.x, y: targetPos.y + offset.y };
+	const ray = new Ray(sourceCenter, targetCenter);
+	if (
+		CONFIG.Canvas.polygonBackends.move.testCollision(ray.A, ray.B, {
+			mode: 'any',
+			type: 'move',
+		})
+	)
+		return true;
 }
