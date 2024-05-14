@@ -1,3 +1,7 @@
+## v11.2.1 <hl>
+- Clean up code.
+- Add Elevation Ruler compatibility, by overriding any settings if ER is doing anything in that segment of movement (will revisit).
+
 ## v11.1.1 <hl>
 - Add translation file.
 - Bump compatibility to Foundry v11.315 and dnd5e 3.0.4
