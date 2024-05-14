@@ -8,7 +8,7 @@
 ![Latest Release Download Count](https://img.shields.io/github/downloads/thatlonelybugbear/token-warp/latest/total?color=2b82fc&label=LATEST%20DOWNLOADS&style=for-the-badge)
 [![Forge Installs](https://img.shields.io/badge/dynamic/json?label=Forge%20Installs&query=package.installs&suffix=%25&url=https://forge-vtt.com/api/bazaar/package/tokenwarp&colorB=68a74f&style=for-the-badge)](https://forge-vtt.com/bazaar#package=tokenwarp)
 
-<hl>
+## Description
 A small module for Foundry VTT,  which helps GMs to avoid revealing their maps by automatically cancelling the dragged tokens' movement animation, when there is a wall in their path.
 
 There are also settings for removing by default the movement animation from all tokens, or changing the default movement speed.
