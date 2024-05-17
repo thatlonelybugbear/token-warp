@@ -1,3 +1,8 @@
+## v11.2.2 <hl>
+- More compatibility updates for Elevation Ruler.
+- Added a default Token Warp KeyQ to teleport tokens when pressed. 
+- Now TW respects the boundaries of the padding when moving by arrows or by dragging the tokens, except for the case that KeyQ is pressed, or Elevation Ruler's toggle pathfinding button.
+
 ## v11.2.1 <hl>
 - Clean up code.
 - Add Elevation Ruler compatibility, by overriding any settings if ER is doing anything in that segment of movement (will revisit).
