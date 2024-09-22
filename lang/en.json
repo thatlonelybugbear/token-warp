@@ -3,8 +3,16 @@
   "TOKENWARP.WallsCancelTokenAnimationHint": "When checked and the GM drags tokens over scene walls, the tokens appear at their destinations instantly (no token movement animations). This setting helps GMs to not reveal map areas not meant to be seen by their players (will not have any effect if the token movement animation is OFF).",
   "TOKENWARP.DefaultTokenAnimationSwitchName": "No token movement animations by default.",
   "TOKENWARP.DefaultTokenAnimationSwitchHint": "When checked, the tokens appear at their destinations instantly (no token movement animations).",
-  "TOKENWARP.ExcludedScenesName": "Excluded Scenes.",
+  "TOKENWARP.ExcludedScenesName": "Excluded Scenes",
   "TOKENWARP.ExcludedScenesHint": "Add Scene UUIDs (or IDs) separated by semicolons (;). Token movement animations always ON.",
-  "TOKENWARP.DefaultTokenAnimationSpeedName": "Token movement animation speed.",
-  "TOKENWARP.DefaultTokenAnimationSpeedHint": "Default is 6. Foundry v10 was using a default of 12."
+  "TOKENWARP.DefaultTokenAnimationSpeedName": "Token movement animation speed",
+  "TOKENWARP.DefaultTokenAnimationSpeedHint": "Default is 6. Foundry v10 was using a default of 12.",
+  "TOKENWARP.wallsBlockTA": "Walls block",
+  "TOKENWARP.defaultTA": "Default",
+  "TOKENWARP.noTA": "No movement aninations",
+  "TOKENWARP.TokenAnimationSwitchName": "Choose behaviour",
+  "TOKENWARP.TokenAnimationSwitchHint": "Default: Foundry token's movement animations, Walls block: Dragging over walls will move the tokens to the destination immediatelly without any movement animations, No movement animations: By default off.",
+  "TOKENWARP.DefaultOutOfBoundsBehaviourName": "Disallow out of bounds movement",
+  "TOKENWARP.DefaultOutOfBoundsBehaviourHint": "Limit tokens valid movements to inside the scene's boundaries only",
+  "TOKENWARP.WarnMultipleRulersActive": "Token Warp: Please use either Elevation Ruler or Drag Ruler modules. Both are currently enabled"
 }

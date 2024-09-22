@@ -2,36 +2,22 @@ import Constants from './constants.js';
 
 export default class Settings {
   // KEYS FOR WORLD CONFIG SETTINGS
+  static TOKEN_ANIMATION_SWITCH = 'defaultTokenAnimationSwitch';
   static WALLS_CANCEL_TOKEN_ANIMATION_GM = 'wallsCancelTokenAnimationGM';
-  static DEFAULT_TOKEN_ANIMATION_SWITCH = 'defaultTokenAnimationSwitch';
+  static DEFAULT_TOKEN_ANIMATION_SWITCH_OLD = 'defaultTokenAnimationSwitchOLD';
   static EXCLUDED_SCENES = 'excludedScenes';
   static DEFAULT_TOKEN_ANIMATION_SPEED = 'defaultTokenAnimationSpeed';
+  static DEFAULT_OUT_OF_BOUNDS_BEHAVIOUR = 'outOfBoundsCheck';
+  static TELEPORT_KEYBIND = 'teleportKey';
+  static MIGRATIONS = 'migration';
+  static DEBUG = 'debug';
 
   registerSettings() {
     this._registerWorldSettings();
+    this._registerKeybindings();
   }
 
   _registerWorldSettings() {
-    const userRoles = {};
-    userRoles[CONST.USER_ROLES.PLAYER] = 'Player';
-    userRoles[CONST.USER_ROLES.TRUSTED] = 'Trusted Player';
-    userRoles[CONST.USER_ROLES.ASSISTANT] = 'Assistant GM';
-    userRoles[CONST.USER_ROLES.GAMEMASTER] = 'Game Master';
-    userRoles[5] = 'None';
-
-    game.settings.register(
-      Constants.MODULE_ID,
-      Settings.DEFAULT_TOKEN_ANIMATION_SWITCH,
-      {
-        name: 'TOKENWARP.DefaultTokenAnimationSwitchName',
-        hint: 'TOKENWARP.DefaultTokenAnimationSwitchHint',
-        scope: 'world',
-        config: true,
-        default: false,
-        type: Boolean,
-      }
-    );
-
     game.settings.register(Constants.MODULE_ID, Settings.EXCLUDED_SCENES, {
       name: 'TOKENWARP.ExcludedScenesName',
       hint: 'TOKENWARP.ExcludedScenesHint',
@@ -42,40 +28,120 @@ export default class Settings {
 
     game.settings.register(
       Constants.MODULE_ID,
-      Settings.WALLS_CANCEL_TOKEN_ANIMATION_GM,
+      Settings.TOKEN_ANIMATION_SWITCH,
       {
-        name: 'TOKENWARP.WallsCancelTokenAnimationName',
-        hint: 'TOKENWARP.WallsCancelTokenAnimationHint',
+        name: 'TOKENWARP.TokenAnimationSwitchName',
+        hint: 'TOKENWARP.TokenAnimationSwitchHint',
         scope: 'world',
         config: true,
-        default: true,
+        default: 'default',
+        type: String,
+        choices: {
+          default: 'TOKENWARP.defaultTA',
+          noanimations: 'TOKENWARP.noTA',
+          wallsblock: 'TOKENWARP.wallsBlockTA',
+        },
+      }
+    );
+
+    game.settings.register(
+      Constants.MODULE_ID,
+      Settings.DEFAULT_TOKEN_ANIMATION_SWITCH_OLD,
+      {
+        name: 'TOKENWARP.DefaultTokenAnimationSwitchName',
+        hint: 'TOKENWARP.DefaultTokenAnimationSwitchHint',
+        scope: 'world',
+        config: false,
+        default: false,
         type: Boolean,
       }
     );
 
     game.settings.register(
       Constants.MODULE_ID,
-      Settings.DEFAULT_TOKEN_ANIMATION_SPEED,
+      Settings.WALLS_CANCEL_TOKEN_ANIMATION_GM,
       {
-        name: 'TOKENWARP.DefaultTokenAnimationSpeedName',
-        hint: 'TOKENWARP.DefaultTokenAnimationSpeedHint',
+        name: 'TOKENWARP.WallsCancelTokenAnimationName',
+        hint: 'TOKENWARP.WallsCancelTokenAnimationHint',
+        scope: 'world',
+        config: false,
+        default: false,
+        type: Boolean,
+      }
+    );
+
+	  game.settings.register(
+		  Constants.MODULE_ID,
+		  Settings.DEFAULT_TOKEN_ANIMATION_SPEED,
+		  {
+			  name: 'TOKENWARP.DefaultTokenAnimationSpeedName',
+			  hint: 'TOKENWARP.DefaultTokenAnimationSpeedHint',
+			  scope: 'world',
+			  config: true,
+			  default: 6,
+			  type: Number,
+			  range: {
+				  max: 20,
+				  min: 1,
+				  step: 1,
+			  },
+		  }
+	  );
+
+    game.settings.register(
+      Constants.MODULE_ID,
+      Settings.DEFAULT_OUT_OF_BOUNDS_BEHAVIOUR,
+      {
+        name: 'TOKENWARP.DefaultOutOfBoundsBehaviourName',
+        hint: 'TOKENWARP.DefaultOutOfBoundsBehaviourHint',
         scope: 'world',
         config: true,
-        default: 6,
-        type: Number,
-        range: {
-          max: 20,
-          min: 1,
-          step: 1,
-        },
+        default: false,
+        type: Boolean,
       }
+    );
+
+    game.settings.register(Constants.MODULE_ID, Settings.MIGRATIONS, {
+      name: 'TOKENWARP.Migration',
+      scope: 'world',
+      config: false,
+      type: String,
+    });
+
+    game.settings.register(Constants.MODULE_ID, Settings.DEBUG, {
+      name: 'TOKENWARP.Debug',
+      scope: 'world',
+      config: false,
+      type: Boolean,
+    });
+  }
+
+  _registerKeybindings() {
+    game.keybindings.register(Constants.MODULE_ID, Settings.TELEPORT_KEYBIND, {
+      name: 'TOKENWARP.TeleportKeybindName',
+      editable: [{ key: 'KeyQ' }],
+      restricted: true,
+    });
+  }
+
+  get teleportKey() {
+    return game.keybindings.get(
+      Constants.MODULE_ID,
+      Settings.TELEPORT_KEYBIND
+    )[0]?.key;
+  }
+
+  get movementSwitchOLD() {
+    return game.settings.get(
+      Constants.MODULE_ID,
+      Settings.DEFAULT_TOKEN_ANIMATION_SWITCH_OLD
     );
   }
 
   get movementSwitch() {
     return game.settings.get(
       Constants.MODULE_ID,
-      Settings.DEFAULT_TOKEN_ANIMATION_SWITCH
+      Settings.TOKEN_ANIMATION_SWITCH
     );
   }
 
@@ -115,5 +181,20 @@ export default class Settings {
       Constants.MODULE_ID,
       Settings.DEFAULT_TOKEN_ANIMATION_SPEED
     );
+  }
+
+  get outOfBounds() {
+    return game.settings.get(
+      Constants.MODULE_ID,
+      Settings.DEFAULT_OUT_OF_BOUNDS_BEHAVIOUR
+    );
+  }
+
+  get migration() {
+    return game.settings.get(Constants.MODULE_ID, Settings.MIGRATIONS);
+  }
+
+  get debug() {
+    return game.settings.get(Constants.MODULE_ID, Settings.DEBUG);
   }
 }
