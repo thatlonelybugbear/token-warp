@@ -14,5 +14,6 @@
   "TOKENWARP.TokenAnimationSwitchHint": "Default: Foundry token's movement animations, Walls block: Dragging over walls will move the tokens to the destination immediatelly without any movement animations, No movement animations: By default off.",
   "TOKENWARP.DefaultOutOfBoundsBehaviourName": "Disallow out of bounds movement",
   "TOKENWARP.DefaultOutOfBoundsBehaviourHint": "Limit tokens valid movements to inside the scene's boundaries only",
-  "TOKENWARP.WarnMultipleRulersActive": "Token Warp: Please use either Elevation Ruler or Drag Ruler modules. Both are currently enabled"
+  "TOKENWARP.WarnMultipleRulersActive": "Token Warp: Please use either Elevation Ruler or Drag Ruler modules. Both are currently enabled",
+  "TOKENWARP.TeleportKeybindName": "Teleport Key for GMs"
 }
