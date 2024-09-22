@@ -1,3 +1,10 @@
+## v12.0.0 <hl>
+- Full compatibility with v12
+- Drag Ruler and Elevation Ruler compatibility updates
+- Out of bounds fixes
+- Teleport keys fixes
+- Settings migrations
+  
 ## v11.2.2 <hl>
 - More compatibility updates for Elevation Ruler.
 - Added a default Token Warp KeyQ to teleport tokens when pressed. 
