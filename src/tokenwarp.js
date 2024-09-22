@@ -1,141 +1,205 @@
 import Settings from './settings.js';
+import Constants from './constants.js';
 
 const settings = new Settings();
+const name = Constants.MODULE_NAME;
 
 /*  Functions */
 export function _preUpdateToken(tdoc, changes, options, userId) {
-	if ((changes.x || changes.y) && options.animate !== false) {
-		const ev = event;
-		const keyTW =
-			/*game.keybindings.get('tokenwarp', 'teleport')?.[0].key || */ 'KeyQ';
-		const keyER = game.modules.get('elevationruler')?.active
-			? game.keybindings.get('elevationruler', 'togglePathfinding')[0].key
-			: keyTW;
-		const hasKey =
-			ev?.view?.game.keyboard.downKeys.has(keyER) ||
-			ev?.view?.game.keyboard.downKeys.has(keyTW);
-		const ruler = canvas.controls.ruler;
-		const { segments } = ruler;
-		const { size, distance } = canvas.scene.grid || {};
-		const finalSegment = segments?.at(-1);
-		const destination = finalSegment
-			? { x: finalSegment.ray.B.x, y: finalSegment.ray.B.y }
-			: { x: changes.x ?? tdoc.x, y: changes.y ?? tdoc.y };
-		const isRulerMoving = ruler._state === Ruler.STATES.MOVING;
-		if (
-			isRulerMoving &&
-			(hasKey ||
-				(!settings.excludedScene &&
-					(settings.movementSwitch ||
-						(game.users.get(userId).isGM &&
-							settings.wallBlock &&
-							_wallsBlockMovement(tdoc, segments)) ||
-						canvas.scene.dimensions.sceneRect.x > destination.x ||
-						canvas.scene.dimensions.sceneRect.x +
-							canvas.scene.dimensions.sceneRect.width -
-							canvas.grid.size * tdoc.width <
-							destination.x ||
-						canvas.scene.dimensions.sceneRect.y > destination.y ||
-						canvas.scene.dimensions.sceneRect.y +
-							canvas.scene.dimensions.sceneRect.height -
-							canvas.grid.size * tdoc.height <
-							destination.y)))
-		) {
-			let elevation;
-			let update = {};
-			if (segments?.length) {
-				update = getAdjustedDestination(tdoc, segments, hasKey);
-				elevation = segments.at(-1).waypointElevationIncrement
-					? tdoc.elevation +
-					  Math.round(
-							(segments.at(-1).waypointElevationIncrement * distance) / size
-					  )
-					: tdoc.elevation;
-				update.elevation = elevation;
-			} else {
-				update = getAdjustedDestination(tdoc, segments ?? destination, hasKey);
+	if (
+		(!changes.x && !changes.y) ||
+		(changes.x == tdoc.x && changes.y == tdoc.y) ||
+		options.animate == false ||
+		options.teleport == true ||
+		options.tokenwarped == true
+	)
+		return;
+	const token = tdoc.object;
+	const ev = event;
+	const keyTW = settings.teleportKey;
+	const keyER = getElevationRulerKey();
+	const hasKey =
+		isKeyPressed(ev, keyTW) || elevationRulerPathfindingKeybind(ev, keyER);
+	const {
+		excludedScene,
+		movementSpeed,
+		movementSwitch,
+		outOfBounds,
+		debug,
+		migration,
+	} = settings;
+	if (debug)
+		console.warn(`${name} settings: ||`, {
+			excludedScene,
+			movementSpeed,
+			movementSwitch,
+			outOfBounds,
+			debug,
+			migration,
+		});
+	const destination = { x: changes.x, y: changes.y }; //topLeft
+	const origin = { x: tdoc.x, y: tdoc.y }; //topLeft
+	const destinationCenter = token.getCenterPoint(destination);
+
+	const originCenter = token.center;
+
+	const ruler = canvas.controls.ruler;
+	const { segments } = ruler || {};
+	const finalSegment = segments.find((s) => s.last);
+	const activeRulerModules = getActiveRulers();
+	if (activeRulerModules == 'both') return true;
+	const tokenCenterPointDiff = token.getCenterPoint({ x: 0, y: 0, z: 0 });
+	const finalDestination =
+		activeRulerModules == 'ER' && segments.length > 1
+			? {
+				x: finalSegment.ray.B.x - tokenCenterPointDiff.x,
+				y: finalSegment.ray.B.y - tokenCenterPointDiff.y,
+				z: finalSegment.ray.B.z,
 			}
-			tdoc.update(update, { animate: false, animation: {} });
-			return false;
-		}
-		if (settings.movementSpeed)
-			foundry.utils.setProperty(
-				options,
-				'animation.movementSpeed',
-				settings.movementSpeed
-			);
-		if (
-			canvas.scene.dimensions.sceneRect.x > destination.x ||
-			canvas.scene.dimensions.sceneRect.x +
-				canvas.scene.dimensions.sceneRect.width -
-				canvas.grid.size * tdoc.width <
-				destination.x ||
-			canvas.scene.dimensions.sceneRect.y > destination.y ||
-			canvas.scene.dimensions.sceneRect.y +
-				canvas.scene.dimensions.sceneRect.height -
-				canvas.grid.size * tdoc.height <
-				destination.y
-		) {
-			changes.x = Math.clamped(
-				destination.x,
-				canvas.scene.dimensions.sceneRect.x,
-				canvas.scene.dimensions.sceneRect.x +
-					canvas.scene.dimensions.sceneRect.width -
-					canvas.grid.size * tdoc.width
-			);
-			changes.y = Math.clamped(
-				destination.y,
-				canvas.scene.dimensions.sceneRect.y,
-				canvas.scene.dimensions.sceneRect.y +
-					canvas.scene.dimensions.sceneRect.height -
-					canvas.grid.size * tdoc.height
-			);
-		}
-		return true;
-	}
+			: activeRulerModules == 'DR' && segments.length
+				? token.getSnappedPosition({
+					x: finalSegment.ray.B.x - tokenCenterPointDiff.x,
+					y: finalSegment.ray.B.y - tokenCenterPointDiff.y,
+					z: finalSegment.ray.B.z,
+				})
+				: destination;
+  	if (excludedScene || hasKey) {
+	  if (!hasKey) return getMovementSpeed(options, settings);
+    else {
+		  tdoc.update(finalDestination, {
+			  animate: false,
+			  teleport: true,
+			  tokenwarped: true,
+		  });
+		  return false;
+	  };
+	};
+
+  if (
+    (changes.x !== tdoc.x || changes.y !== tdoc.y) &&
+    options.animate !== false &&
+    !options.teleport &&
+    !options.tokenwarped
+  ) {
+    if (
+      settings.movementSwitch == 'noanimations' ||
+      (game.users.get(userId).isGM &&
+        settings.movementSwitch == 'wallsblock' &&
+        token.checkCollision(destinationCenter, { origin: originCenter }))
+    ) {
+		options.animate = false;
+		options.teleport = true;
+		options.tokenwarped = true;
+    }
+    if (
+      settings.outOfBounds &&
+      !hasKey &&
+      positionOutOfBounds({ destination, origin, tdoc }) == true
+    ) {
+		options.tokenwarped = true;
+		foundry.utils.mergeObject(
+			changes,
+			clampDestinationToSceneRect({ tdoc, destination })
+		);
+    }
+    if (
+      hasKey ||
+      positionOutOfBounds({ destination, origin, tdoc }) == 'both'
+    ) {
+		options.animate = false;
+		options.teleport = true;
+		options.tokenwarped = true;
+    }
+	  return getMovementSpeed(options, settings);
+  }
 }
 
-function _wallsBlockMovement(tdoc, segments) {
-	if (!segments?.length) return false;
-	for (const segment of segments) {
-		if (tdoc.object.checkCollision(segment.ray.B, { origin: segment.ray.A })) {
-			return true;
-		}
-	}
-	return false;
+function isElevationRulerActive() {
+  return game.modules.get('elevationruler')?.active;
 }
 
-function getAdjustedDestination(tdoc, segments, hasKey) {
-	const origin = segments.length ? segments[0].ray.A : { x: tdoc.x, y: tdoc.y };
-	const destination = segments.length ? segments.at(-1).ray.B : segments;
-	const s2 =
-		canvas.scene.grid.type === CONST.GRID_TYPES.GRIDLESS
-			? 1
-			: canvas.dimensions.size / 2;
-	const dx = Math.round((tdoc.x - origin.x) / s2) * s2;
-	const dy = Math.round((tdoc.y - origin.y) / s2) * s2;
-	const r = new Ray(origin, destination);
-	const adjustedDestination = canvas.grid.grid._getRulerDestination(
-		r,
-		{ x: dx, y: dy },
-		tdoc.object
-	);
-	if (hasKey) return adjustedDestination;
-	else
-		return {
-			x: Math.clamped(
-				adjustedDestination.x,
-				canvas.scene.dimensions.sceneRect.x,
-				canvas.scene.dimensions.sceneRect.x +
-					canvas.scene.dimensions.sceneRect.width -
-					canvas.grid.size * tdoc.width
-			),
-			y: Math.clamped(
-				adjustedDestination.y,
-				canvas.scene.dimensions.sceneRect.y,
-				canvas.scene.dimensions.sceneRect.y +
-					canvas.scene.dimensions.sceneRect.height -
-					canvas.grid.size * tdoc.height
-			),
-		};
+function isDragRulerActive() {
+  return game.modules.get('drag-ruler')?.active;
+}
+
+//DR always calls animate false when the key is pressed and hooks before Token Warp, so for now no need to check it.
+function getDragRulerKey() {
+  return isDragRulerActive()
+    ? game.keybindings.get('drag-ruler', 'moveWithoutAnimation')?.[0]?.key
+    : null;
+}
+
+function getElevationRulerKey() {
+  return isElevationRulerActive()
+    ? game.keybindings.get('elevationruler', 'togglePathfinding')[0]?.key //expect error if the key bind is null
+    : null;
+}
+
+function isKeyPressed(ev, key) {
+  return key ? ev?.view?.game.keyboard.downKeys.has(key) : false; //return false if no proper key is found.
+}
+
+function elevationRulerPathFindingState() {
+  return isElevationRulerActive()
+    ? game.settings.get('elevationruler', 'pathfinding_enable') &&
+        game.settings.get('elevationruler', 'pathfinding-control')
+    : false;
+}
+
+function elevationRulerPathfindingKeybind(ev, keyER) {
+  if (!keyER) return false;
+  const pathfindingToggled = elevationRulerPathFindingState();
+  const keyPress = isKeyPressed(ev, keyER);
+  return pathfindingToggled && keyPress; //!(pathfindingToggled ^ keyPress);
+}
+
+function positionOutOfBounds({ destination, origin, tdoc }) {
+  //positions top left
+  const rect = canvas.scene.dimensions.sceneRect;
+  const { top, bottom, left, right } = tdoc.object.shape;
+  const destinationOOB =
+    rect.x > destination.x ||
+    rect.y > destination.y ||
+    rect.x + rect.width < destination.x + right ||
+    rect.y + rect.height < destination.y + bottom;
+  const originOOB =
+    rect.x > origin.x ||
+    rect.y > origin.y ||
+    rect.x + rect.width < origin.x + right ||
+    rect.y + rect.height < origin.y + bottom;
+  return destinationOOB && originOOB
+    ? 'both'
+    : destinationOOB && !originOOB
+    ? true
+    : false;
+}
+
+function clampDestinationToSceneRect({ destination, tdoc }) {
+  const rect = canvas.scene.dimensions.sceneRect;
+  const { top, bottom, left, right } = tdoc.object.shape;
+  return {
+    x: Math.clamp(destination.x, rect.x, rect.x + rect.width - right),
+    y: Math.clamp(destination.y, rect.y, rect.y + rect.height - bottom),
+  };
+}
+
+function getMovementSpeed(options, settings) {
+  if (settings.movementSpeed)
+    foundry.utils.setProperty(
+      options,
+      'animation.movementSpeed',
+      settings.movementSpeed
+    );
+}
+
+export function getActiveRulers() {
+  const ER = game.modules.get('elevationruler')?.active;
+  const DR = game.modules.get('drag-ruler')?.active;
+  if (ER && DR) {
+    ui.notifications.error(
+      game.i18n.localize('TOKENWARP.WarnMultipleRulersActive')
+    );
+    return 'both';
+  }
+  return ER ? 'ER' : DR ? 'DR' : false;
 }
