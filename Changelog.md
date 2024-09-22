@@ -1,3 +1,7 @@
+## v12.0.1 <hl>
+- Respect isGM only teleport key
+- Forgotten translation key, for the teleport keybind
+
 ## v12.0.0 <hl>
 - Full compatibility with v12
 - Drag Ruler and Elevation Ruler compatibility updates
