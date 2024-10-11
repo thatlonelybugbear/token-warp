@@ -1,3 +1,6 @@
+## v12.0.2 <hl>
+- Fix typo in module's manifest
+
 ## v12.0.1 <hl>
 - Respect isGM only teleport key
 - Forgotten translation key, for the teleport keybind
