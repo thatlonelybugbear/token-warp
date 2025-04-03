@@ -1,4 +1,4 @@
-## v13.339.0
+## v13.339.1
 - Initial release for dual v12 and v13 compatibility
 
 ## v12.0.2 <hl>
