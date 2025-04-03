@@ -45,4 +45,4 @@ Hooks.once('ready', async () => {
   }
 });
 
-Hooks.on('preUpdateToken', tokenwarp._preUpdateToken);
+Hooks.on('preUpdateToken', game.version > 13 ? tokenwarp._preUpdateTokenV13 : tokenwarp._preUpdateToken);
