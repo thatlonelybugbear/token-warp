@@ -12,6 +12,7 @@
     }
   ],
   "compatibility": {
+    "maximum: "13",
     "minimum": "12",
     "verified": "13.339"
   },
