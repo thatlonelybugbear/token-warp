@@ -108,7 +108,7 @@ export function _preUpdateTokenV13(tdoc, changes, options, userId) {
 			hasKey,
 		});
 	const activeRulerModules = getActiveRulers();
-	if (activeRulerModules == 'both') return true;
+	if (activeRulerModules) return true; //v13 rulers compatibility unknown, so disable anything TW related if they are enabled.
 	const finalDestination = getFinalDestination({ options, id: tdoc.id });
 	if (excludedScene || (hasKey && isGM)) {
 		if (!hasKey) return getMovementSpeed(options, settings);
