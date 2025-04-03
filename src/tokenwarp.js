@@ -90,7 +90,7 @@ export function _preUpdateTokenV13(tdoc, changes, options, userId) {
 
 	const destination = { x: changes.x, y: changes.y }; //topLeft
 	const origin = { x: tdoc.x, y: tdoc.y }; //topLeft
-	const isMoveOutOfBounds = settings.outOfBounds && positionOutOfBounds({ destination, origin, tdoc });
+	const isMoveOutOfBounds = outOfBounds && positionOutOfBounds({ destination, origin, tdoc });
 	const destinationCenter = token.getCenterPoint(destination);
 
 	const originCenter = token.center;
@@ -134,10 +134,10 @@ export function _preUpdateTokenV13(tdoc, changes, options, userId) {
 			options.teleport = true;
 			const { x, y } = clampDestinationToSceneRect({ tdoc, destination });
 			foundry.utils.mergeObject(options.movement[tdoc.id], setLastWayPoint({ options, x, y, id: tdoc.id }));
-			const destination = foundry.utils.duplicate(options._movement[tdoc.id].destination);
-			destination.x = x;
-			destination.y = y;
-			options._movement[tdoc.id].destination = destination;
+			const newDestination = foundry.utils.duplicate(options._movement[tdoc.id].destination);
+			newDestination.x = x;
+			newDestination.y = y;
+			options._movement[tdoc.id].destination = newDestination;
 			foundry.utils.mergeObject(changes, { x, y }, { inPlace: true });
 			options.tokenwarped = true;
 		}
