@@ -13,8 +13,6 @@ There are also settings for removing by default the movement animation from all 
 
 If the setting for no token movement animations is selected, you can provide scene UUIDs or scene IDs, for specific scenes to be excluded.
 
-![tokenwarp_functionality](https://github.com/thatlonelybugbear/token-warp/assets/7237090/4937e939-9964-44ff-9c66-bcc27066711e)
-
 <hr>
 If you like what I do, consider supporting this lonely bugbear 🐾
 
@@ -26,3 +24,5 @@ Every shiny gold coin helps keep the ideas flowing and the goblins at bay.
 
 👉 [Discord Invite Link](<https://discord.gg/KYb74fcsBt>)
 <hr>
+
+![tokenwarp_functionality](https://github.com/thatlonelybugbear/token-warp/assets/7237090/4937e939-9964-44ff-9c66-bcc27066711e)
