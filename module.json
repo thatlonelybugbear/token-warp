@@ -14,7 +14,7 @@
   "compatibility": {
     "maximum": "13",
     "minimum": "13",
-    "verified": "13.339"
+    "verified": "13.346"
   },
   "esmodules": ["src/setup.js"],
   "relationships": { },
