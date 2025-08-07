@@ -1,3 +1,6 @@
+## v13.346.1
+- Reworked for v13, dropping v12 compatibility
+
 ## v13.339.1
 - Initial release for dual v12 and v13 compatibility
 
