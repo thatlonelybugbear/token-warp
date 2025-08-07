@@ -1,5 +1,5 @@
-## v13.339.1
-- Initial release for dual v12 and v13 compatibility
+## v12.343.1
+- Release changing branches for legacy v12 compatibility only
 
 ## v12.0.2 <hl>
 - Fix typo in module's manifest
