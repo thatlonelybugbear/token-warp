@@ -1,3 +1,7 @@
+## v13.347.1
+- Fix for `options.movement` being undefined when updating a token document's position in a macro.
+- Compatibility bump for Foundry v13.347
+
 ## v13.339.1
 - Initial release for dual v12 and v13 compatibility
 
