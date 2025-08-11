@@ -151,11 +151,11 @@ export function _preUpdateTokenV13(tdoc, changes, options, userId) {
 }
 
 function getFinalDestination({ options, id }) {
-	const tokenMovementArray = options.movement[id].waypoints;
+	const tokenMovementArray = options.movement?.[id]?.waypoints || [];
 	return tokenMovementArray[tokenMovementArray.length - 1];
 }
 function setLastWayPoint({ options, x, y, id }) {
-	const tokenMovementArray = foundry.utils.duplicate(options.movement[id].waypoints);
+	const tokenMovementArray = foundry.utils.duplicate(options.movement?.[id]?.waypoints || []);
 
 	if (tokenMovementArray.length > 0) {
 		const lastWaypoint = tokenMovementArray[tokenMovementArray.length - 1];
