@@ -80,7 +80,7 @@ export function _preUpdateToken(tdoc, changes, options, userId) {
 }
 
 export function _preUpdateTokenV13(tdoc, changes, options, userId) {
-	if ((!changes.x && !changes.y) || (changes.x == tdoc.x && changes.y == tdoc.y) || options.animate == false || options.teleport == true || options.tokenwarped == true) return true;
+	if ((!changes.x && !changes.y) || (changes.x == tdoc.x && changes.y == tdoc.y) || options.animate == false || options.action === 'displace' || options.tokenwarped == true) return true;
 	const isGM = game.users.get(userId).isGM;
 	const token = tdoc.object;
 	const ev = event;
@@ -115,23 +115,23 @@ export function _preUpdateTokenV13(tdoc, changes, options, userId) {
 		else {
 			tdoc.update(finalDestination, {
 				animate: false,
-				teleport: true,
+				action: 'displace',
 				tokenwarped: true,
 			});
 			return false;
 		}
 	}
 
-	if ((changes.x !== tdoc.x || changes.y !== tdoc.y) && options.animate !== false && !options.teleport && !options.tokenwarped) {
+	if ((changes.x !== tdoc.x || changes.y !== tdoc.y) && options.animate !== false && options.action !== 'displace' && !options.tokenwarped) {
 		if (movementSwitch === 'noanimations' || (isGM && movementSwitch === 'wallsblock' && token.checkCollision(destinationCenter, { origin: originCenter }))) {
 			options.animate = false;
-			options.teleport = true;
+			options.action = 'displace';
 			options.tokenwarped = true;
 		}
 		if (((isGM && !hasKey) || !isGM) && isMoveOutOfBounds === 'outwards') {
 			options.tokenwarped = true;
 			options.animate = false;
-			options.teleport = true;
+			options.action = 'displace';
 			const { x, y } = clampDestinationToSceneRect({ tdoc, destination });
 			foundry.utils.mergeObject(options.movement[tdoc.id], setLastWayPoint({ options, x, y, id: tdoc.id }));
 			const newDestination = foundry.utils.duplicate(options._movement[tdoc.id].destination);
@@ -143,7 +143,7 @@ export function _preUpdateTokenV13(tdoc, changes, options, userId) {
 		}
 		if ((isGM && hasKey) || isMoveOutOfBounds === 'both') {
 			options.animate = false;
-			options.teleport = true;
+			options.action = 'displace';
 			options.tokenwarped = true;
 		}
 		return getMovementSpeed(options, settings);
