@@ -1,3 +1,6 @@
+## v13.347.2
+* Clear deprecation warning about `options.teleport`, replaced by `options.action === 'displace'`
+
 ## v13.347.1
 - Fix for `options.movement` being undefined when updating a token document's position in a macro.
 - Compatibility bump for Foundry v13.347
