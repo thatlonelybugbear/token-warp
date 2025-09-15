@@ -24,6 +24,6 @@ Hooks.once('ready', async () => {
 	Hooks.on('preCreateToken', tokenwarp._executePreCreation);
 	Hooks.on('createToken', tokenwarp._executePostCreation);
 	Hooks.on('preDeleteToken', tokenwarp._executePreDeletion);
-	Hooks.on('dDeleteToken', tokenwarp._executePostDeletion);	
+	Hooks.on('deleteToken', tokenwarp._executePostDeletion);	
 	Hooks.on('getHeaderControlsActorSheetV2', tokenwarp._addActorSheetHeaderButton);
 });
