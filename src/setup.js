@@ -21,7 +21,9 @@ Hooks.once('ready', async () => {
 		console.warn(`${Constants.MODULE_NAME}: migration to ${migrationID} complete`);
 	}
 	Hooks.on('preUpdateToken', tokenwarp._preUpdateToken);
-	Hooks.on('createToken', tokenwarp._executeOnCreation);
-	Hooks.on('preDeleteToken', tokenwarp._executeOnDeletion);
+	Hooks.on('preCreateToken', tokenwarp._executePreCreation);
+	Hooks.on('createToken', tokenwarp._executePostCreation);
+	Hooks.on('preDeleteToken', tokenwarp._executePreDeletion);
+	Hooks.on('dDeleteToken', tokenwarp._executePostDeletion);	
 	Hooks.on('getHeaderControlsActorSheetV2', tokenwarp._addActorSheetHeaderButton);
 });
