@@ -15,9 +15,6 @@ If the setting for no token movement animations is selected, you can provide sce
 
 For v13 Foundry, Token Warp now offers macro triggers for pre/post token creation and pre/post token deletion.
 
-[tokenwarpTriggers.webm](https://github.com/user-attachments/assets/3758cfb6-33ba-413c-8e3b-a05e74ed5529)
-
-
 <hr>
 If you like what I do, consider supporting this lonely bugbear 🐾
 
@@ -29,5 +26,7 @@ Every shiny gold coin helps keep the ideas flowing and the goblins at bay.
 
 👉 [Discord Invite Link](<https://discord.gg/KYb74fcsBt>)
 <hr>
+
+[tokenwarpTriggers.webm](https://github.com/user-attachments/assets/3758cfb6-33ba-413c-8e3b-a05e74ed5529)
 
 ![tokenwarp_functionality](https://github.com/thatlonelybugbear/token-warp/assets/7237090/4937e939-9964-44ff-9c66-bcc27066711e)
