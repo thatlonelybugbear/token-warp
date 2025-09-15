@@ -3,7 +3,12 @@ import Constants from './constants.js';
 
 const settings = new Settings();
 const name = Constants.MODULE_NAME;
-const triggers = ['On token creation', 'On token deletion'];
+const triggers = [
+  'Pre token creation',
+  'Post token creation',
+  'Pre token deletion',
+  'Post token deletion',
+];
 const kebabTriggers = triggers.map((t) => t.toLowerCase().replace(/\s+/g, '-'));
 
 /*  Functions */
@@ -260,27 +265,47 @@ function _onDrop(ev) {
 
 // Hooks.on('createToken', tokenwarp._executeOnCreation);
 // Hooks.on('preDeleteToken', tokenwarp._executeOnDeletion);
-export async function _executeOnCreation(token, context, user) {
-  if (game.user.id !== user) return;
-  const hasTrigger = token.actor.getFlag(
-    'tokenwarp',
-    `tokenTriggers.${kebabTriggers[0]}`
-  );
+export async function _executePreCreation(token, data, context, user) {
+  const tag = kebabTriggers[0];
+  const hasTrigger = token.actor.getFlag('tokenwarp', `tokenTriggers.${tag}`);
   if (hasTrigger) {
     const macro = await fromUuid(hasTrigger);
-    return macro.execute({ token, actor: token.actor });
+    return macro.execute({
+      token,
+      actor: token.actor,
+      data,
+      context,
+      user,
+      tag,
+    });
+  }
+}
+export async function _executePostCreation(token, context, user) {
+  if (game.user.id !== user) return;
+  const tag = kebabTriggers[1];
+  const hasTrigger = token.actor.getFlag('tokenwarp', `tokenTriggers.${tag}`);
+  if (hasTrigger) {
+    const macro = await fromUuid(hasTrigger);
+    return macro.execute({ token, actor: token.actor, context, user, tag });
   }
 }
 
-export async function _executeOnDeletion(token, context, user) {
-  if (game.user.id !== user) return;
-  const hasTrigger = token.actor.getFlag(
-    'tokenwarp',
-    `tokenTriggers.${kebabTriggers[1]}`
-  );
+export async function _executePreDeletion(token, context, user) {
+  const tag = kebabTriggers[2];
+  const hasTrigger = token.actor.getFlag('tokenwarp', `tokenTriggers.${tag}`);
   if (hasTrigger) {
     const macro = await fromUuid(hasTrigger);
-    return macro.execute({ token, actor: token.actor });
+    return macro.execute({ token, actor: token.actor, context, user, tag });
+  }
+}
+
+export async function _executePostDeletion(token, context, user) {
+  if (game.user.id !== user) return;
+  const tag = kebabTriggers[3];
+  const hasTrigger = token.actor.getFlag('tokenwarp', `tokenTriggers.${tag}`);
+  if (hasTrigger) {
+    const macro = await fromUuid(hasTrigger);
+    return macro.execute({ token, actor: token.actor, context, user, tag });
   }
 }
 
@@ -288,6 +313,6 @@ export function _addActorSheetHeaderButton(app, controls) {
   controls.push({
     label: `${name} ${game.i18n.localize('TOKENWARP.Triggers')}`,
     icon: 'fas fa-shuffle',
-    onClick: _renderDialog.bind({actor: app.document, token: app.token}),
+    onClick: _renderDialog.bind({ actor: app.document, token: app.token }),
   });
 }
