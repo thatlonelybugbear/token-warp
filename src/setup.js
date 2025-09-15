@@ -21,5 +21,5 @@ Hooks.once('ready', async () => {
 		await game.settings.set(Constants.MODULE_ID, Settings.MIGRATIONS, migrationID);
 		console.warn(`${Constants.MODULE_NAME}: migration to ${migrationID} complete`);
 	}
-	Hooks.on('preUpdateToken', game.version > 13 ? tokenwarp._preUpdateTokenV13 : tokenwarp._preUpdateToken);
+	Hooks.on('preUpdateToken', tokenwarp._preUpdateToken);
 });
