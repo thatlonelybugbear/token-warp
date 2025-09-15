@@ -9,7 +9,6 @@ Hooks.once('init', () => {
 });
 
 Hooks.once('ready', async () => {
-	tokenwarp.getActiveRulers();
 	const migrationID = '11.3.1';
 	const migration = game.settings.get(Constants.MODULE_ID, Settings.MIGRATIONS);
 	if (migration !== migrationID) {
@@ -22,15 +21,7 @@ Hooks.once('ready', async () => {
 		console.warn(`${Constants.MODULE_NAME}: migration to ${migrationID} complete`);
 	}
 	Hooks.on('preUpdateToken', tokenwarp._preUpdateToken);
-});
-
-Hooks.on('createToken', tokenwarp._executeOnCreation);
-Hooks.on('preDeleteToken', tokenwarp._executeOnDeletion);
-
-Hooks.on('getHeaderControlsActorSheetV2', (app, controls) => {
-	controls.push({
-		label: Constants.MODULE_NAME + ` ${game.i18n.localize(TOKENWARP.Triggers)}`,
-		icon: 'fas fa-shuffle',
-		onClick: tokenwarp._renderDialog.bind({actor: app.document, token: app.token}),
-	});
+	Hooks.on('createToken', tokenwarp._executeOnCreation);
+	Hooks.on('preDeleteToken', tokenwarp._executeOnDeletion);
+	Hooks.on('getHeaderControlsActorSheetV2', tokenwarp._addActorSheetHeaderButton);
 });
