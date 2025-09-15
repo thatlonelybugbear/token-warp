@@ -15,5 +15,6 @@
   "TOKENWARP.DefaultOutOfBoundsBehaviourName": "Disallow out of bounds movement",
   "TOKENWARP.DefaultOutOfBoundsBehaviourHint": "Limit tokens valid movements to inside the scene's boundaries only",
   "TOKENWARP.WarnMultipleRulersActive": "Token Warp: Please use either Elevation Ruler or Drag Ruler modules. Both are currently enabled",
-  "TOKENWARP.TeleportKeybindName": "Teleport Key for GMs"
+  "TOKENWARP.TeleportKeybindName": "Teleport Key for GMs",
+  "TOKENWARP.Triggers": "Triggers"
 }
