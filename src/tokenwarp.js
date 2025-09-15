@@ -6,87 +6,12 @@ const name = Constants.MODULE_NAME;
 
 /*  Functions */
 export function _preUpdateToken(tdoc, changes, options, userId) {
-	if ((!changes.x && !changes.y) || (changes.x == tdoc.x && changes.y == tdoc.y) || options.animate == false || options.teleport == true || options.tokenwarped == true) return;
-	const isGM = game.users.get(userId).isGM;
-	const token = tdoc.object;
-	const ev = event;
-	const { excludedScene, movementSpeed, movementSwitch, outOfBounds, debug, migration, teleportKey } = settings;
-	const keyER = getElevationRulerKey();
-	const hasKey = isKeyPressed(ev, teleportKey) || elevationRulerPathfindingKeybind(ev, keyER);
-	const destination = { x: changes.x, y: changes.y }; //topLeft
-	const origin = { x: tdoc.x, y: tdoc.y }; //topLeft
-	const isMoveOutOfBounds = settings.outOfBounds && positionOutOfBounds({ destination, origin, tdoc });
-	const destinationCenter = token.getCenterPoint(destination);
-
-	const originCenter = token.center;
-	if (debug)
-		console.warn(`${name} settings: ||`, {
-			excludedScene,
-			movementSpeed,
-			movementSwitch,
-			outOfBounds,
-			debug,
-			migration,
-		});
-	const ruler = canvas.controls.ruler;
-	const { segments } = ruler || {};
-	const finalSegment = segments.find((s) => s.last);
-	const activeRulerModules = getActiveRulers();
-	if (activeRulerModules == 'both') return true;
-	const tokenCenterPointDiff = token.getCenterPoint({ x: 0, y: 0, z: 0 });
-	const finalDestination =
-		activeRulerModules == 'ER' && segments.length > 1
-			? {
-					x: finalSegment.ray.B.x - tokenCenterPointDiff.x,
-					y: finalSegment.ray.B.y - tokenCenterPointDiff.y,
-					z: finalSegment.ray.B.z,
-			  }
-			: activeRulerModules == 'DR' && segments.length
-			? token.getSnappedPosition({
-					x: finalSegment.ray.B.x - tokenCenterPointDiff.x,
-					y: finalSegment.ray.B.y - tokenCenterPointDiff.y,
-					z: finalSegment.ray.B.z,
-			  })
-			: destination;
-	if (excludedScene || (hasKey && isGM)) {
-		if (!hasKey) return getMovementSpeed(options, settings);
-		else {
-			tdoc.update(finalDestination, {
-				animate: false,
-				teleport: true,
-				tokenwarped: true,
-			});
-			return false;
-		}
-	}
-
-	if ((changes.x !== tdoc.x || changes.y !== tdoc.y) && options.animate !== false && !options.teleport && !options.tokenwarped) {
-		if (settings.movementSwitch == 'noanimations' || (game.users.get(userId).isGM && movementSwitch == 'wallsblock' && token.checkCollision(destinationCenter, { origin: originCenter }))) {
-			options.animate = false;
-			options.teleport = true;
-			options.tokenwarped = true;
-		}
-		if (((isGM && !hasKey) || !isGM) && isMoveOutOfBounds === 'outwards') {
-			options.tokenwarped = true;
-			foundry.utils.mergeObject(changes, clampDestinationToSceneRect({ tdoc, destination }));
-		}
-		if ((isGM && hasKey) || isMoveOutOfBounds === 'both') {
-			options.animate = false;
-			options.teleport = true;
-			options.tokenwarped = true;
-		}
-		return getMovementSpeed(options, settings);
-	}
-}
-
-export function _preUpdateTokenV13(tdoc, changes, options, userId) {
 	if ((!changes.x && !changes.y) || (changes.x == tdoc.x && changes.y == tdoc.y) || options.animate == false || options.action === 'displace' || options.tokenwarped == true) return true;
 	const isGM = game.users.get(userId).isGM;
 	const token = tdoc.object;
 	const ev = event;
 	const { excludedScene, movementSpeed, movementSwitch, outOfBounds, debug, migration, teleportKey } = settings;
-	const keyER = getElevationRulerKey();
-	const hasKey = isKeyPressed(ev, teleportKey) || elevationRulerPathfindingKeybind(ev, keyER);
+	const hasKey = isKeyPressed(ev, teleportKey);
 
 	const destination = { x: changes.x, y: changes.y }; //topLeft
 	const origin = { x: tdoc.x, y: tdoc.y }; //topLeft
@@ -107,8 +32,6 @@ export function _preUpdateTokenV13(tdoc, changes, options, userId) {
 			destination,
 			hasKey,
 		});
-	const activeRulerModules = getActiveRulers();
-	if (activeRulerModules) return true; //v13 rulers compatibility unknown, so disable anything TW related if they are enabled.
 	const finalDestination = getFinalDestination({ options, id: tdoc.id });
 	if (excludedScene || (hasKey && isGM)) {
 		if (!hasKey) return getMovementSpeed(options, settings);
@@ -166,25 +89,6 @@ function setLastWayPoint({ options, x, y, id }) {
 	return { waypoints: tokenMovementArray };
 }
 
-function isElevationRulerActive() {
-	return game.modules.get('elevationruler')?.active;
-}
-
-function isDragRulerActive() {
-	return game.modules.get('drag-ruler')?.active;
-}
-
-//DR always calls animate false when the key is pressed and hooks before Token Warp, so for now no need to check it.
-function getDragRulerKey() {
-	return isDragRulerActive() ? game.keybindings.get('drag-ruler', 'moveWithoutAnimation')?.[0]?.key : null;
-}
-
-function getElevationRulerKey() {
-	return isElevationRulerActive()
-		? game.keybindings.get('elevationruler', 'togglePathfinding')[0]?.key //expect error if the key bind is null
-		: null;
-}
-
 function isKeyPressed(ev, key) {
 	const { MODIFIER_CODES: CODES, MODIFIER_KEYS } = foundry.helpers?.interaction?.KeyboardManager ?? KeyboardManager;
 
@@ -220,17 +124,6 @@ function isKeyPressed(ev, key) {
 	return key ? areKeysPressed(ev, 'teleportKey') : false; //return false if no proper key is found.
 }
 
-function elevationRulerPathFindingState() {
-	return isElevationRulerActive() ? game.settings.get('elevationruler', 'pathfinding_enable') && game.settings.get('elevationruler', 'pathfinding-control') : false;
-}
-
-function elevationRulerPathfindingKeybind(ev, keyER) {
-	if (!keyER) return false;
-	const pathfindingToggled = elevationRulerPathFindingState();
-	const keyPress = isKeyPressed(ev, keyER);
-	return pathfindingToggled && keyPress; //!(pathfindingToggled ^ keyPress);
-}
-
 function positionOutOfBounds({ destination, origin, tdoc }) {
 	//positions top left
 	const rect = canvas.scene.dimensions.sceneRect;
@@ -251,14 +144,4 @@ function clampDestinationToSceneRect({ destination, tdoc }) {
 
 function getMovementSpeed(options, settings) {
 	if (settings.movementSpeed) foundry.utils.setProperty(options, 'animation.movementSpeed', settings.movementSpeed);
-}
-
-export function getActiveRulers() {
-	const ER = game.modules.get('elevationruler')?.active;
-	const DR = game.modules.get('drag-ruler')?.active;
-	if (ER && DR) {
-		ui.notifications.error(game.i18n.localize('TOKENWARP.WarnMultipleRulersActive'));
-		return 'both';
-	}
-	return ER ? 'ER' : DR ? 'DR' : false;
 }
