@@ -23,3 +23,14 @@ Hooks.once('ready', async () => {
 	}
 	Hooks.on('preUpdateToken', tokenwarp._preUpdateToken);
 });
+
+Hooks.on('createToken', tokenwarp._executeOnCreation);
+Hooks.on('preDeleteToken', tokenwarp._executeOnDeletion);
+
+Hooks.on('getHeaderControlsActorSheetV2', (app, controls) => {
+	controls.push({
+		label: Constants.MODULE_NAME + ` ${game.i18n.localize(TOKENWARP.Triggers)}`,
+		icon: 'fas fa-shuffle',
+		onClick: tokenwarp._renderDialog.bind({actor: app.document, token: app.token}),
+	});
+});
