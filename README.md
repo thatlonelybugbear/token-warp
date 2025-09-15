@@ -13,6 +13,11 @@ There are also settings for removing by default the movement animation from all 
 
 If the setting for no token movement animations is selected, you can provide scene UUIDs or scene IDs, for specific scenes to be excluded.
 
+For v13 Foundry, Token Warp now offers macro triggers for pre/post token creation and pre/post token deletion.
+
+[tokenwarpTriggers.webm](https://github.com/user-attachments/assets/3758cfb6-33ba-413c-8e3b-a05e74ed5529)
+
+
 <hr>
 If you like what I do, consider supporting this lonely bugbear 🐾
 
