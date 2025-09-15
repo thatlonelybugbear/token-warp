@@ -263,8 +263,6 @@ function _onDrop(ev) {
   if (data.uuid) ev.target.value = data.uuid; //overwrite
 }
 
-// Hooks.on('createToken', tokenwarp._executeOnCreation);
-// Hooks.on('preDeleteToken', tokenwarp._executeOnDeletion);
 export async function _executePreCreation(token, data, context, user) {
   const tag = kebabTriggers[0];
   const hasTrigger = token.actor.getFlag('tokenwarp', `tokenTriggers.${tag}`);
