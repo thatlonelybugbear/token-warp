@@ -3,6 +3,8 @@ import Constants from './constants.js';
 
 const settings = new Settings();
 const name = Constants.MODULE_NAME;
+const triggers = ['On token creation', 'On token deletion'];
+const kebabTriggers = triggers.map((t) => t.toLowerCase().replace(/\s+/g, '-'));
 
 /*  Functions */
 export function _preUpdateToken(tdoc, changes, options, userId) {
@@ -203,10 +205,7 @@ function getMovementSpeed(options, settings) {
     );
 }
 
-const triggers = ['On token creation', 'On token deletion'];
-const kebabTriggers = triggers.map((t) => t.toLowerCase().replace(/\s+/g, '-'));
-
-export async function _renderDialog() {
+async function _renderDialog() {
   const token = this.token; //Token#Document
   const actor = token?.actor || this.actor;
   const twTriggers = actor.getFlag('tokenwarp', 'tokenTriggers') || {};
@@ -283,4 +282,12 @@ export async function _executeOnDeletion(token, context, user) {
     const macro = await fromUuid(hasTrigger);
     return macro.execute({ token, actor: token.actor });
   }
+}
+
+export function _addActorSheetHeaderButton(app, controls) {
+  controls.push({
+    label: `${name} ${game.i18n.localize('TOKENWARP.Triggers')}`,
+    icon: 'fas fa-shuffle',
+    onClick: _renderDialog.bind({actor: app.document, token: app.token}),
+  });
 }
