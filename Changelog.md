@@ -1,5 +1,7 @@
 ## v13.348.1
 * Dropped v12 support. For v12 use [13.347.2 json](<https://github.com/thatlonelybugbear/token-warp/releases/download/v13.347.2/module.json>)
+* First pass into adding triggers for macros on token creation and token deletion.
+  * In the Actor sheet context menu, there is a new button for `Token Warp Triggers`. Drag and drop macros in the dialog fields to link them as needed.
 
 ## v13.347.2
 * Clear deprecation warning about `options.teleport`, replaced by `options.action === 'displace'`
