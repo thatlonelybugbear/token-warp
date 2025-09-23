@@ -214,7 +214,7 @@ function _onDrop(ev) {
 }
 
 export async function _executePreCreation(token, data, context, user) {
-	const tag = kebabTriggers[0];
+	const tag = kebabTriggers[1];
 	const hasTrigger = token.actor.getFlag('tokenwarp', `tokenTriggers.${tag}`);
 	if (hasTrigger) {
 		const macro = await fromUuid(hasTrigger);
@@ -230,7 +230,7 @@ export async function _executePreCreation(token, data, context, user) {
 }
 export async function _executePostCreation(token, context, user) {
 	if (game.user.id !== user) return;
-	const tag = kebabTriggers[1];
+	const tag = kebabTriggers[2];
 	const hasTrigger = token.actor.getFlag('tokenwarp', `tokenTriggers.${tag}`);
 	if (hasTrigger) {
 		const macro = await fromUuid(hasTrigger);
@@ -239,7 +239,7 @@ export async function _executePostCreation(token, context, user) {
 }
 
 export async function _executePreDeletion(token, context, user) {
-	const tag = kebabTriggers[2];
+	const tag = kebabTriggers[3];
 	const hasTrigger = token.actor.getFlag('tokenwarp', `tokenTriggers.${tag}`);
 	if (hasTrigger) {
 		const macro = await fromUuid(hasTrigger);
@@ -249,7 +249,7 @@ export async function _executePreDeletion(token, context, user) {
 
 export async function _executePostDeletion(token, context, user) {
 	if (game.user.id !== user) return;
-	const tag = kebabTriggers[3];
+	const tag = kebabTriggers[4];
 	const hasTrigger = token.actor.getFlag('tokenwarp', `tokenTriggers.${tag}`);
 	if (hasTrigger) {
 		const macro = await fromUuid(hasTrigger);
