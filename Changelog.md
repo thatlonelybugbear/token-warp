@@ -1,3 +1,6 @@
+## v13.348.2
+* Added an `All hooks` field, which will add the same macro to all fields. If you clear that field, all the macros from the other fields will be cleared as well.
+
 ## v13.348.1
 * Dropped v12 support. For v12 use [13.347.2 json](<https://github.com/thatlonelybugbear/token-warp/releases/download/v13.347.2/module.json>)
 * First pass into adding triggers for macros pre/post token creation and pre/post token deletion.
