@@ -27,6 +27,6 @@ Every shiny gold coin helps keep the ideas flowing and the goblins at bay.
 👉 [Discord Invite Link](<https://discord.gg/KYb74fcsBt>)
 <hr>
 
-[tokenwarpTriggers.webm](https://github.com/user-attachments/assets/3758cfb6-33ba-413c-8e3b-a05e74ed5529)
+![tokenwarpTriggers](https://github.com/user-attachments/assets/81afcd34-da52-4b84-b6c4-52a836687c2d)
 
 ![tokenwarp_functionality](https://github.com/thatlonelybugbear/token-warp/assets/7237090/4937e939-9964-44ff-9c66-bcc27066711e)
