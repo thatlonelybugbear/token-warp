@@ -209,7 +209,7 @@ function _onDrop(ev) {
 
 	if (target.dataset.trigger === 'all-hooks') {
 		const container = target.closest('form');
-		container.querySelectorAll("input[type='text']['data-trigger']").forEach((el) => (el.value = data.uuid));
+		container.querySelectorAll("input[type='text'][data-trigger]").forEach((el) => (el.value = data.uuid));
 	}
 }
 
