@@ -9,6 +9,7 @@ export default class Settings {
   static DEFAULT_TOKEN_ANIMATION_SPEED = 'defaultTokenAnimationSpeed';
   static DEFAULT_OUT_OF_BOUNDS_BEHAVIOUR = 'outOfBoundsCheck';
   static TELEPORT_KEYBIND = 'teleportKey';
+  static DISABLE_ROTATION_KEYBIND = 'disableRotationKey';
   static MIGRATIONS = 'migration';
   static DEBUG = 'debug';
 
@@ -122,12 +123,28 @@ export default class Settings {
       editable: [{ key: 'KeyQ' }],
       restricted: true,
     });
+    game.keybindings.register(
+      Constants.MODULE_ID,
+      Settings.DISABLE_ROTATION_KEYBIND,
+      {
+        name: 'TOKENWARP.DisableRotationKeybindName',
+        editable: [{ key: 'KeyN' }],
+        restricted: false,
+      }
+    );
   }
 
   get teleportKey() {
     return game.keybindings.get(
       Constants.MODULE_ID,
       Settings.TELEPORT_KEYBIND
+    )[0]?.key;
+  }
+
+  get disableRotationKey() {
+    return game.keybindings.get(
+      Constants.MODULE_ID,
+      Settings.DISABLE_ROTATION_KEYBIND
     )[0]?.key;
   }
 
