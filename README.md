@@ -9,7 +9,7 @@
 
 ## Description
 
-A Foundry VTT module that helps prevent accidental map reveals by controlling token movement animation behavior.
+A **system agnostic** Foundry VTT module that helps prevent accidental map reveals by controlling token movement animation behavior.
 
 It also provides settings for:
 
