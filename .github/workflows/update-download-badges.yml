@@ -60,13 +60,19 @@ jobs:
 
       - name: Commit and push badge branch
         run: |
-          if git diff --quiet -- badge/total-downloads.json; then
-            echo "No badge changes detected."
-            exit 0
-          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout -B automation/update-total-downloads-badge
+          if git diff --quiet -- badge/total-downloads.json; then
+            if git ls-remote --exit-code --heads origin badge-data >/dev/null 2>&1; then
+              echo "No badge changes detected."
+              exit 0
+            fi
+            echo "No content change, but badge-data branch does not exist. Creating it."
+            git checkout -B badge-data
+            git push origin badge-data
+            exit 0
+          fi
+          git checkout -B badge-data
           git add badge/total-downloads.json
           git commit -m "chore: update total downloads badge"
-          git push --force-with-lease origin automation/update-total-downloads-badge
+          git push --force-with-lease origin badge-data
