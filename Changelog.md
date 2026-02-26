@@ -1,4 +1,5 @@
 ## v13.351.1
+* Updated for Foundry v13.351
 * Expanded Token Warp trigger coverage beyond create/delete:
   * `preUpdateToken` / `updateToken`
   * `preUpdateActor` / `updateActor`
