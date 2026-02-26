@@ -1,19 +1,23 @@
 ## v13.351.3
 
-- Added v1 trigger presets in the Actor `Triggers` tab:
+- Added trigger presets (first pass, low impact and feedback appreciated) in the Actor `Triggers` tab:
   - `Spawn`, `Despawn`, `Movement`, `HP Zero`, `All Events`
   - Presets now act as scope filters for visible trigger fields.
   - `All hooks` now copies only into the currently active preset scope.
 - Added HP-zero compatibility API for systems/modules:
   - Default support is built in for `dnd5e` and systems exposing `actor.getRollData().attributes.hp.value/max`.
   - Exposed on `ready` via `game.modules.get("tokenwarp").api` and `Hooks.callAll("tokenwarp.ready", api)`.
-  - Quick registration example:
-    - `Hooks.on("tokenwarp.ready", (api) => api.registerHpRollDataSupportCheck((actor) => { const rd = actor?.getRollData?.(); return foundry.utils.hasProperty(rd, "attributes.hp.value") && foundry.utils.hasProperty(rd, "attributes.hp.max"); }));`
-  - Added a Crucible-oriented example registration using `Hooks.once("tokenwarp.ready", ...)` with `actor.getRollData().resources.health.value/max`.
+  - Quick registration example [README HP-Zero Compatibility API](./README.md#hp-zero-compatibility-api)
+    - The support for Crucible has been added in the "setup.js" of the module, as an example of how to use the API.
 - Trigger dialog reset updates:
   - Added a `Reset` dialog button that resets only the currently active tab and keeps the dialog open.
-  - Trigger-tab reset now clears only the active preset scope (`All hooks` + that preset's fields).
-  - Movement animation reset now works for both dnd5e per-mode sliders and non-dnd5e single-speed sliders.
+  - Trigger-tab reset clears only the active preset scope (`All hooks` + that preset's fields).
+  - Movement animation tab reset behavior:
+    - non-dnd5e resets to the module global `Token movement animation speed`.
+    - dnd5e resets each movement mode slider to its pre-calculated default.
+- Multi-token movement speed behavior:
+  - When multiple tokens are controlled and moved together, Token Warp uses the global `Token movement animation speed` for all selected tokens.
+  - Per-actor movement animation overrides are ignored for that multi-token move.
 
 ## v13.351.2
 

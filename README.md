@@ -98,6 +98,7 @@ In the Token Warp Actor-sheet dialog there is a `Movement animation speed` tab.
 - `Override animation speeds` enables per-actor animation speed overrides.
 - If override is enabled, the actor override takes precedence over the world `Token movement animation speed` setting when Token Warp applies `options.animation.movementSpeed`.
 - On `dnd5e`, the tab auto-builds per-mode speed inputs from non-zero `actor.system.attributes.movement` values and pre-fills them from movement ratios (faster movement modes get faster initial animation speeds).
+- If multiple tokens are controlled and moved together, Token Warp uses the global `Token movement animation speed` for all selected tokens, and skips per-actor overrides for that move.
 
 ## Movement Behavior Notes
 
