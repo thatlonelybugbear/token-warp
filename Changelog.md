@@ -1,3 +1,45 @@
+## v13.351.1
+* Expanded Token Warp trigger coverage beyond create/delete:
+  * `preUpdateToken` / `updateToken`
+  * `preUpdateActor` / `updateActor`
+  * movement start/stop via `moveToken`
+  * actor HP-zero checks during actor updates
+* Added explicit Token Warp hooks for user/module integration:
+  * `tokenwarp.movementStart`
+  * `tokenwarp.movementStop`
+  * `tokenwarp.preActorHpZero` (fires during `preUpdateActor` when `changes.system.attributes.hp.value <= 0`)
+  * `tokenwarp.actorHpZero` (fires during `updateActor` when `changes.system.attributes.hp.value <= 0`)
+* Added new Trigger dialog fields:
+  * `Pre token update`
+  * `Post token update`
+  * `Movement start`
+  * `Movement stop`
+  * `Pre Actor update`
+  * `Post Actor update`
+  * `Pre Actor HP zero`
+  * `Post Actor HP zero`
+* Added a tabbed Actor-sheet Token Warp dialog:
+  * `Triggers` tab
+  * `Movement animation speed` tab
+* Added per-actor movement animation overrides:
+  * `Override animation speeds` toggle is saved and reloaded from actor flags
+  * Per-actor speed overrides take precedence over world default movement speed
+  * On dnd5e, per-mode sliders are built from non-zero `actor.system.attributes.movement` values
+  * On dnd5e, per-mode defaults are prefilled from movement ratios against the world movement speed baseline
+* Movement override wiring and behavior updates:
+  * Hooked `preMoveToken` to Token Warp movement handling
+  * Added a `_preUpdateMovement` wrapper for system-provided forced moves (`tokenwarp.forceAllowMovement`) so rejected core movement can be re-authorized when explicitly requested
+  * Always applies `options.animation.movementSpeed` from actor override or world default when movement data is present
+* Movement mode behavior clarifications:
+  * `Walls block` only applies when Foundry Core `unconstrainedMovement` is enabled for the GM
+  * If Core `unconstrainedMovement` is disabled, `Walls block` has no additional effect
+  * `Disallow out of bounds movement` clamps to the nearest legal destination while preserving segment continuation
+  * Out-of-bounds clamping does not force no-animation unless `No movement animations` is selected
+* Hook payload normalization and compatibility:
+  * Standardized canonical macro payload properties (`tokenDocument`/`actorDocument`, `data`, `options`, `userId`)
+  * Kept legacy create/delete aliases (`token`, `context`, `user`) with compatibility warnings
+* Updated localization/README to document new movement behavior notes and trigger hook usage.
+
 ## v13.348.2
 * Added an `All hooks` field, which will add the same macro to all fields. If you clear that field, all the macros from the other fields will be cleared as well.
 
