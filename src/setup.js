@@ -74,6 +74,7 @@ Hooks.once('ready', async () => {
 Hooks.once('tokenwarp.ready', (api) => {
 	api.registerHpRollDataSupportCheck((actor) => {
 		const hp = actor?.getRollData?.()?.resources?.health;
-		if ('value' in hp && 'max' in hp) return true;
+		if (!hp || typeof hp !== 'object') return false;
+		return 'value' in hp && 'max' in hp;
 	});
 });

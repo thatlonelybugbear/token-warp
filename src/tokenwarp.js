@@ -6,7 +6,7 @@ const name = Constants.MODULE_NAME;
 const WALLBLOCK_NO_ANIMATION_ONCE = new WeakMap();
 const LEGACY_HOOK_ARG_WARNINGS = new Set();
 const HP_ROLL_DATA_SUPPORT_CHECKS = [];
-let SUPPORTS_HP_ROLL_DATA;
+let HP_ROLL_DATA_SUPPORTED_ACTORS = new WeakSet();
 const triggers = [
 	'All hooks',
 	'Pre token creation',
@@ -295,7 +295,7 @@ export function registerHpRollDataSupportCheck(
 		if (prepend) HP_ROLL_DATA_SUPPORT_CHECKS.unshift(check);
 		else HP_ROLL_DATA_SUPPORT_CHECKS.push(check);
 	}
-	SUPPORTS_HP_ROLL_DATA = undefined;
+	HP_ROLL_DATA_SUPPORTED_ACTORS = new WeakSet();
 	return true;
 }
 
@@ -305,17 +305,13 @@ export function supportsHpRollData(actorDocument) {
 
 function actorHasHpRollData(actorDocument) {
 	if (!actorDocument) return false;
-	if (typeof SUPPORTS_HP_ROLL_DATA === 'boolean') {
-		return SUPPORTS_HP_ROLL_DATA;
-	}
-	if (game?.system?.id === 'dnd5e') {
-		SUPPORTS_HP_ROLL_DATA = true;
-		return true;
-	}
-	SUPPORTS_HP_ROLL_DATA =
+	if (game?.system?.id === 'dnd5e') return true;
+	if (HP_ROLL_DATA_SUPPORTED_ACTORS.has(actorDocument)) return true;
+	const supportsHpRollData =
 		hasDefaultHpRollData(actorDocument) ||
 		hasCustomHpRollDataSupport(actorDocument);
-	return SUPPORTS_HP_ROLL_DATA;
+	if (supportsHpRollData) HP_ROLL_DATA_SUPPORTED_ACTORS.add(actorDocument);
+	return supportsHpRollData;
 }
 
 function getRemainingPlannedWaypoints({ options, id, destination }) {
@@ -561,6 +557,8 @@ function getMovementSpeed(movement, options, settings, tdoc, lookupOptions) {
 	const actor = tdoc?.actor;
 	const movementAnimation =
 		actor?.getFlag('tokenwarp', 'movementAnimation') ?? {};
+	const multipleTokensControlled =
+		(canvas?.tokens?.controlled?.length ?? 0) > 1;
 	const movementAction = getMovementActionFromOptions(
 		movement,
 		lookupOptions ?? options,
@@ -568,6 +566,8 @@ function getMovementSpeed(movement, options, settings, tdoc, lookupOptions) {
 	);
 
 	const pickSpeedOverride = () => {
+		// Multi-token workflows should use one global speed across all tokens.
+		if (multipleTokensControlled) return null;
 		if (!coerceBoolean(movementAnimation?.override, false)) return null;
 
 		// Support both legacy single-speed and per-mode speed flag shapes.
@@ -1047,18 +1047,19 @@ async function _renderDialog() {
 									slidersWrap.querySelectorAll('[data-tw-movement-mode]'),
 								)
 							: [];
-						for (const [key, speed] of Object.entries(
-							animationResetSpeedsByMode,
-						)) {
-							let changedForMode =
-								setNamedInputValue(`movementAnimation.speeds.${key}`, speed) ||
-								setNamedInputValue(`movementAnimation.speed.${key}`, speed);
-
-							if (!changedForMode) {
-								const row = sliderRows.find(
-									(element) => element.dataset.twMovementMode === key,
+						if (sliderRows.length) {
+							for (const row of sliderRows) {
+								if (!(row instanceof HTMLElement)) continue;
+								const key = String(row.dataset.twMovementMode ?? '');
+								if (!key) continue;
+								const speed = clampAnimationSpeed(
+									row.dataset.twResetSpeed,
+									animationResetSpeedsByMode[key] ?? baseSettingSpeed,
 								);
-								if (row instanceof HTMLElement) {
+								let changedForMode =
+									setNamedInputValue(`movementAnimation.speeds.${key}`, speed) ||
+									setNamedInputValue(`movementAnimation.speed.${key}`, speed);
+								if (!changedForMode) {
 									const inputs = Array.from(
 										row.querySelectorAll(
 											"input[type='range'], input[type='number']",
@@ -1069,26 +1070,31 @@ async function _renderDialog() {
 											applyInputValue(input, speed) || changedForMode;
 									}
 								}
+								changed = changedForMode || changed;
 							}
+							return changed;
+						}
 
-							changed = changedForMode || changed;
+						for (const [key, speed] of Object.entries(
+							animationResetSpeedsByMode,
+						)) {
+							changed =
+								setNamedInputValue(`movementAnimation.speeds.${key}`, speed) ||
+								setNamedInputValue(`movementAnimation.speed.${key}`, speed) ||
+								changed;
 						}
 						return changed;
 					}
-					const changedByName = setNamedInputValue(
+					let changed = setNamedInputValue(
 						'movementAnimation.speed',
 						animationResetSpeed,
 					);
-					if (changedByName) return true;
-
-					// Fallback for systems/renderers where NumberField renames inputs.
-					if (!(slidersWrap instanceof HTMLElement)) return false;
+					if (!(slidersWrap instanceof HTMLElement)) return changed;
 					const fallbackInputs = Array.from(
 						slidersWrap.querySelectorAll(
 							"input[type='range'], input[type='number']",
 						),
 					);
-					let changed = false;
 					for (const input of fallbackInputs) {
 						changed = applyInputValue(input, animationResetSpeed) || changed;
 					}
