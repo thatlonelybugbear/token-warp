@@ -1,0 +1,10 @@
+# OS/editor noise
+.DS_Store
+Thumbs.db
+
+# Local build/release artifacts
+dist/
+release/
+releases/
+*.zip
+*.tar.gz

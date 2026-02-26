@@ -1,0 +1,68 @@
+name: Update Download Badges
+
+on:
+  release:
+    types: [published]
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-total-downloads:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Rebuild total downloads badge JSON
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require("fs");
+
+            const { owner, repo } = context.repo;
+            const releases = await github.paginate(
+              github.rest.repos.listReleases,
+              { owner, repo, per_page: 100 }
+            );
+
+            let total = 0;
+            for (const release of releases) {
+              for (const asset of release.assets ?? []) {
+                if (asset.name === "module.zip") {
+                  total += Number(asset.download_count ?? 0);
+                }
+              }
+            }
+
+            fs.mkdirSync("badge", { recursive: true });
+            fs.writeFileSync(
+              "badge/total-downloads.json",
+              JSON.stringify(
+                {
+                  schemaVersion: 1,
+                  label: "TOTAL DOWNLOADS",
+                  message: String(total),
+                  color: "2b82fc"
+                },
+                null,
+                2
+              ) + "\n"
+            );
+
+            core.info(`Updated total module.zip downloads: ${total}`);
+
+      - name: Commit and push if changed
+        run: |
+          if git diff --quiet -- badge/total-downloads.json; then
+            echo "No badge changes detected."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add badge/total-downloads.json
+          git commit -m "chore: update total downloads badge"
+          git push

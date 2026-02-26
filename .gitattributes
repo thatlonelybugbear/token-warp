@@ -1,0 +1,7 @@
+# Keep repo automation and badge source out of archive-style release bundles.
+.github/ export-ignore
+badge/ export-ignore
+
+# Repo metadata/docs are not required in packaged module archives.
+.gitignore export-ignore
+.gitattributes export-ignore
