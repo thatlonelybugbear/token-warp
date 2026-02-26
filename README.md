@@ -60,26 +60,12 @@ At `ready`, Token Warp exposes:
 - `game.modules.get("tokenwarp").api`
 - `Hooks.callAll("tokenwarp.ready", api)`
 
-API methods:
+## API methods:
 
 - `api.supportsHpRollData(actor)`
 - `api.registerHpRollDataSupportCheck(check, { prepend })`
 
-Example:
-
-```js
-Hooks.on('tokenwarp.ready', (api) => {
-	api.registerHpRollDataSupportCheck((actor) => {
-		const rollData = actor?.getRollData?.();
-		return (
-			foundry.utils.hasProperty(rollData, 'attributes.hp.value') &&
-			foundry.utils.hasProperty(rollData, 'attributes.hp.max')
-		);
-	});
-});
-```
-
-Crucible test case example:
+### Crucible test case example:
 
 ```js
 Hooks.once('tokenwarp.ready', (api) => {
