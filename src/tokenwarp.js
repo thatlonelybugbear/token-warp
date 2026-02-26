@@ -205,6 +205,10 @@ export function _preUpdateToken(tdoc, changes, options, userId) {
 
 export function _preMoveToken(tokenDocument, move, options) {
     const movementUserId = getMovementUserId(move, options);
+    const ev = event;
+    if (isKeyPressed(ev, settings.disableRotationKey, 'disableRotationKey')) {
+        move.autoRotate = false;
+    }
     return _preUpdateToken(tokenDocument, move, options, movementUserId);
 }
 
@@ -274,7 +278,7 @@ function setLastWayPoint({ options, x, y, id }) {
     return { waypoints: tokenMovementArray };
 }
 
-function isKeyPressed(ev, key) {
+function isKeyPressed(ev, key, action = 'teleportKey') {
     const { MODIFIER_CODES: CODES, MODIFIER_KEYS } =
         foundry.helpers?.interaction?.KeyboardManager ?? KeyboardManager;
 
@@ -311,7 +315,7 @@ function isKeyPressed(ev, key) {
             return activeModifiers[b.key];
         });
     }
-    return key ? areKeysPressed(ev, 'teleportKey') : false; //return false if no proper key is found.
+    return key ? areKeysPressed(ev, action) : false; //return false if no proper key is found.
 }
 
 function positionOutOfBounds({ destination, origin, tdoc }) {

@@ -39,6 +39,7 @@ In the Token Warp Actor-sheet dialog there is a `Movement animation speed` tab.
 - `Walls block` applies only when Foundry Core `Unconstrained movement` is enabled for the GM.
 - If Core `Unconstrained movement` is disabled, `Walls block` has no extra effect.
 - `Disallow out of bounds movement` clamps movement to the nearest valid destination; it does not force no-animation by itself.
+- Keybinding `Disable Token Rotation Key` is per-user. While held, it temporarily suppresses movement auto-rotation.
 
 <hr>
 If you like what I do, consider supporting this lonely bugbear.

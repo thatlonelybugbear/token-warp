@@ -1,3 +1,6 @@
+## v13.351.2
+* Added a per-user keybinding (`KeyN` by default) to temporarily disable token auto-rotation for the current movement.
+
 ## v13.351.1
 * Updated for Foundry v13.351
 * Expanded Token Warp trigger coverage beyond create/delete:
