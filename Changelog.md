@@ -28,7 +28,7 @@
   * On dnd5e, per-mode defaults are prefilled from movement ratios against the world movement speed baseline
 * Movement override wiring and behavior updates:
   * Hooked `preMoveToken` to Token Warp movement handling
-  * Added a `_preUpdateMovement` wrapper for system-provided forced moves (`tokenwarp.forceAllowMovement`) so rejected core movement can be re-authorized when explicitly requested
+  * Teleport-key override now runs inline on the active movement update (no `_preUpdateMovement` force-allow wrapper)
   * Always applies `options.animation.movementSpeed` from actor override or world default when movement data is present
 * Movement mode behavior clarifications:
   * `Walls block` only applies when Foundry Core `unconstrainedMovement` is enabled for the GM
@@ -36,8 +36,8 @@
   * `Disallow out of bounds movement` clamps to the nearest legal destination while preserving segment continuation
   * Out-of-bounds clamping does not force no-animation unless `No movement animations` is selected
 * Hook payload normalization and compatibility:
-  * Standardized canonical macro payload properties (`tokenDocument`/`actorDocument`, `data`, `options`, `userId`)
-  * Kept legacy create/delete aliases (`token`, `context`, `user`) with compatibility warnings
+  * Macro payloads use `token`/`actor` plus `data`, `options`, and user fields
+  * Kept `context` alias for `options` with compatibility warning
 * Updated localization/README to document new movement behavior notes and trigger hook usage.
 
 ## v13.348.2

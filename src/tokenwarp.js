@@ -3,7 +3,6 @@ import Constants from './constants.js';
 
 const settings = new Settings();
 const name = Constants.MODULE_NAME;
-const MOVEMENT_FORCE_ALLOW_OPTION = 'forceAllowMovement';
 const WALLBLOCK_NO_ANIMATION_ONCE = new WeakMap();
 const LEGACY_HOOK_ARG_WARNINGS = new Set();
 const triggers = [
@@ -67,6 +66,7 @@ export function _preUpdateToken(tdoc, changes, options, userId) {
     const token = tdoc.object;
     const ev = event;
     const hasKey = isKeyPressed(ev, teleportKey);
+    const shouldInstantTeleport = !!isGM && hasKey;
 
     const isMoveOutOfBounds =
         outOfBounds && positionOutOfBounds({ destination, origin, tdoc });
@@ -83,33 +83,11 @@ export function _preUpdateToken(tdoc, changes, options, userId) {
             destination,
             hasKey,
         });
-    const plannedWaypoints = getPlannedMovementWaypoints({
-        changes,
-        options,
-        id: tdoc.id,
-    });
     const currentSegmentWaypoints = getCurrentSegmentWaypoints({
         changes,
         fallbackDestination: destination,
     });
-    const finalDestination =
-        plannedWaypoints.at(-1) ??
-        getFinalDestination({ changes, options, id: tdoc.id }) ??
-        destination;
-    if (excludedScene || (hasKey && isGM)) {
-        if (!hasKey) return true;
-        else {
-            const updateOptions = {
-                animate: false,
-                action: 'displace',
-                tokenwarped: true,
-                tokenwarp: { [MOVEMENT_FORCE_ALLOW_OPTION]: true },
-            };
-            getMovementSpeed(changes, updateOptions, settings, tdoc, options);
-            tdoc.update(finalDestination, updateOptions);
-            return false;
-        }
-    }
+    if (excludedScene) return true;
 
     if (
         (destination.x !== origin.x || destination.y !== origin.y) &&
@@ -117,7 +95,11 @@ export function _preUpdateToken(tdoc, changes, options, userId) {
         options.action !== 'displace' &&
         !options.tokenwarped
     ) {
-        if (
+        if (shouldInstantTeleport) {
+            options.animate = false;
+            options.action = 'displace';
+            options.tokenwarped = true;
+        } else if (
             movementSwitch === 'noanimations' ||
             (isGM && movementSwitch === 'wallsblock')
         ) {
@@ -145,7 +127,7 @@ export function _preUpdateToken(tdoc, changes, options, userId) {
                 }
             }
         }
-        if (((isGM && !hasKey) || !isGM) && isMoveOutOfBounds === 'outwards') {
+        if (!shouldInstantTeleport && isMoveOutOfBounds === 'outwards') {
             const { x, y } = clampDestinationToSceneRect({ tdoc, destination });
             const keepNoAnimation =
                 options.animate === false || options.action === 'displace';
@@ -211,7 +193,7 @@ export function _preUpdateToken(tdoc, changes, options, userId) {
                 options.action = 'displace';
             }
         }
-        if ((isGM && hasKey) || isMoveOutOfBounds === 'both') {
+        if (shouldInstantTeleport || isMoveOutOfBounds === 'both') {
             options.animate = false;
             options.action = 'displace';
             options.tokenwarped = true;
@@ -224,67 +206,6 @@ export function _preUpdateToken(tdoc, changes, options, userId) {
 export function _preMoveToken(tokenDocument, move, options) {
     const movementUserId = getMovementUserId(move, options);
     return _preUpdateToken(tokenDocument, move, options, movementUserId);
-}
-
-export function registerMovementOverride() {
-    const tokenDocumentClass = CONFIG?.Token?.documentClass;
-    if (!tokenDocumentClass?.prototype?._preUpdateMovement) return;
-
-    const proto = tokenDocumentClass.prototype;
-    if (proto._tokenwarpPreUpdateMovementWrapped) return;
-
-    const originalPreUpdateMovement = proto._preUpdateMovement;
-    Object.defineProperty(proto, '_tokenwarpPreUpdateMovementWrapped', {
-        value: true,
-        configurable: true,
-    });
-
-    proto._preUpdateMovement = async function (movement, options) {
-        const forceAllow =
-            options?.tokenwarp?.[MOVEMENT_FORCE_ALLOW_OPTION] === true;
-        const result = await originalPreUpdateMovement.call(
-            this,
-            movement,
-            options,
-        );
-
-        if (!forceAllow) return result;
-
-        options.noHook = true;
-        if (result === false) return true;
-        return result ?? true;
-    };
-}
-
-function getFinalDestination({ options, id }) {
-    const tokenMovementArray = options?.movement?.[id]?.waypoints || [];
-    return tokenMovementArray[tokenMovementArray.length - 1];
-}
-
-function getPlannedMovementWaypoints({ changes, options, id }) {
-    const optionWaypoints = options?.movement?.[id]?.waypoints;
-    if (Array.isArray(optionWaypoints) && optionWaypoints.length) {
-        return optionWaypoints;
-    }
-
-    const waypoints = [];
-    const passedWaypoints = changes?.passed?.waypoints;
-    const pendingWaypoints = changes?.pending?.waypoints;
-    if (Array.isArray(passedWaypoints) && passedWaypoints.length) {
-        waypoints.push(...passedWaypoints);
-    }
-    if (Array.isArray(pendingWaypoints) && pendingWaypoints.length) {
-        waypoints.push(...pendingWaypoints);
-    } else if (changes?.destination) {
-        waypoints.push(changes.destination);
-    } else if (changes?.x !== undefined || changes?.y !== undefined) {
-        waypoints.push({
-            x: changes.x,
-            y: changes.y,
-            elevation: changes.elevation,
-        });
-    }
-    return waypoints;
 }
 
 function getCurrentSegmentWaypoints({ changes, fallbackDestination }) {
@@ -954,6 +875,18 @@ function defineLegacyHookArgAlias(
     });
 }
 
+function getMacroUserFields(userOrUserId) {
+    if (typeof userOrUserId === 'string') {
+        return { userId: userOrUserId, user: userOrUserId };
+    }
+
+    if (userOrUserId === undefined || userOrUserId === null) return {};
+
+    const fields = { user: userOrUserId };
+    if (typeof userOrUserId?.id === 'string') fields.userId = userOrUserId.id;
+    return fields;
+}
+
 function createTokenLifecycleMacroPayload({
     hookName,
     tokenDocument,
@@ -963,29 +896,19 @@ function createTokenLifecycleMacroPayload({
     tag,
 }) {
     const payload = {
-        tokenDocument,
+        token: tokenDocument,
         actor: tokenDocument?.actor,
         options,
-        userId,
         tag,
+        ...getMacroUserFields(userId),
     };
     if (data !== undefined) payload.data = data;
 
     defineLegacyHookArgAlias(payload, {
         hookName,
-        legacyKey: 'token',
-        canonicalKey: 'tokenDocument',
-    });
-    defineLegacyHookArgAlias(payload, {
-        hookName,
         legacyKey: 'context',
         canonicalKey: 'options',
         details: 'The options object is now exposed as "options".',
-    });
-    defineLegacyHookArgAlias(payload, {
-        hookName,
-        legacyKey: 'user',
-        canonicalKey: 'userId',
     });
 
     return payload;
@@ -1092,16 +1015,14 @@ export async function _executePreUpdateToken(
     if (hasTrigger) {
         const macro = await fromUuid(hasTrigger);
         return macro.execute({
-            tokenDocument,
             token: tokenDocument,
             actor: tokenDocument.actor,
             data,
             changes: data,
             options,
             context: options,
-            userId,
-            user: userId,
             tag,
+            ...getMacroUserFields(userId),
         });
     }
 }
@@ -1121,16 +1042,14 @@ export async function _executePostUpdateToken(
     if (hasTrigger) {
         const macro = await fromUuid(hasTrigger);
         return macro.execute({
-            tokenDocument,
             token: tokenDocument,
             actor: tokenDocument.actor,
             data,
             changes: data,
             options,
             context: options,
-            userId,
-            user: userId,
             tag,
+            ...getMacroUserFields(userId),
         });
     }
 }
@@ -1200,16 +1119,14 @@ export async function _executeTokenMovementStart(
     if (hasTrigger) {
         const macro = await fromUuid(hasTrigger);
         return macro.execute({
-            tokenDocument,
             token: tokenDocument,
             actor: tokenDocument.actor,
             move,
             changes: move,
             options,
             context: options,
-            userId,
-            user: userId,
             tag,
+            ...getMacroUserFields(userId),
         });
     }
 }
@@ -1228,16 +1145,14 @@ export async function _executeTokenMovementStop(
     if (hasTrigger) {
         const macro = await fromUuid(hasTrigger);
         return macro.execute({
-            tokenDocument,
             token: tokenDocument,
             actor: tokenDocument.actor,
             move,
             changes: move,
             options,
             context: options,
-            userId,
-            user: userId,
             tag,
+            ...getMacroUserFields(userId),
         });
     }
 }
@@ -1262,15 +1177,13 @@ export async function _executePreUpdateActor(
     if (hasTrigger) {
         const macro = await fromUuid(hasTrigger);
         result = await macro.execute({
-            actorDocument,
             actor: actorDocument,
             data,
             changes: data,
             options,
             context: options,
-            userId,
-            user: userId,
             tag,
+            ...getMacroUserFields(userId),
         });
     }
     if (isHpZeroUpdate(data)) {
@@ -1301,15 +1214,13 @@ export async function _executePostUpdateActor(
     if (hasTrigger) {
         const macro = await fromUuid(hasTrigger);
         await macro.execute({
-            actorDocument,
             actor: actorDocument,
             data,
             changes: data,
             options,
             context: options,
-            userId,
-            user: userId,
             tag,
+            ...getMacroUserFields(userId),
         });
     }
     if (isHpZeroUpdate(data)) {
@@ -1339,15 +1250,13 @@ export async function _executePreActorHpZero(
     if (hasTrigger) {
         const macro = await fromUuid(hasTrigger);
         return macro.execute({
-            actorDocument,
             actor: actorDocument,
             data,
             changes: data,
             options,
             context: options,
-            userId,
-            user: userId,
             tag: hookTag,
+            ...getMacroUserFields(userId),
         });
     }
 }
@@ -1368,15 +1277,13 @@ export async function _executePostActorHpZero(
     if (hasTrigger) {
         const macro = await fromUuid(hasTrigger);
         return macro.execute({
-            actorDocument,
             actor: actorDocument,
             data,
             changes: data,
             options,
             context: options,
-            userId,
-            user: userId,
             tag: hookTag,
+            ...getMacroUserFields(userId),
         });
     }
 }

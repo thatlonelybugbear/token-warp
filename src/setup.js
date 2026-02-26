@@ -46,7 +46,6 @@ Hooks.once('ready', async () => {
         );
     }
     Hooks.on('preMoveToken', tokenwarp._preMoveToken);
-    tokenwarp.registerMovementOverride();
     Hooks.on('preCreateToken', tokenwarp._executePreCreation);
     Hooks.on('createToken', tokenwarp._executePostCreation);
     Hooks.on('preDeleteToken', tokenwarp._executePreDeletion);

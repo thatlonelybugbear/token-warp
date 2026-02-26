@@ -19,10 +19,10 @@ For Foundry v13, Token Warp includes actor-configurable macro triggers for token
 ## Trigger hooks
 Token Warp exposes explicit hooks that users/modules can call and that can be mapped in the Token Warp Triggers dialog:
 
-- `tokenwarp.movementStart(tokenDocument, move, options, userId, tag)`
-- `tokenwarp.movementStop(tokenDocument, move, options, userId, tag)`
-- `tokenwarp.preActorHpZero(actorDocument, data, options, userId, tag)`
-- `tokenwarp.actorHpZero(actorDocument, data, options, userId, tag)`
+- `tokenwarp.movementStart(token, move, options, userId, tag)`
+- `tokenwarp.movementStop(token, move, options, userId, tag)`
+- `tokenwarp.preActorHpZero(actor, data, options, userId, tag)`
+- `tokenwarp.actorHpZero(actor, data, options, userId, tag)`
 
 HP-zero hooks fire only when an actor update includes `changes.system.attributes.hp.value <= 0`:
 - `tokenwarp.preActorHpZero` during `preUpdateActor`
