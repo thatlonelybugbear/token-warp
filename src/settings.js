@@ -81,7 +81,7 @@ export default class Settings {
 			  default: 6,
 			  type: Number,
 			  range: {
-				  max: 20,
+				  max: 30,
 				  min: 1,
 				  step: 1,
 			  },
