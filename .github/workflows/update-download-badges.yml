@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   update-total-downloads:
@@ -16,6 +17,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
 
       - name: Rebuild total downloads badge JSON
         uses: actions/github-script@v7
@@ -55,14 +59,13 @@ jobs:
 
             core.info(`Updated total module.zip downloads: ${total}`);
 
-      - name: Commit and push if changed
-        run: |
-          if git diff --quiet -- badge/total-downloads.json; then
-            echo "No badge changes detected."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add badge/total-downloads.json
-          git commit -m "chore: update total downloads badge"
-          git push
+      - name: Create pull request for badge update
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: "chore: update total downloads badge"
+          branch: "automation/update-total-downloads-badge"
+          delete-branch: true
+          title: "chore: update total downloads badge"
+          body: "Automated update of `badge/total-downloads.json`."
+          add-paths: |
+            badge/total-downloads.json
