@@ -43,7 +43,7 @@ Token Warp exposes explicit hooks that users/modules can call and that can be ma
 - `tokenwarp.preActorHpZero(actor, data, options, userId, tag)`
 - `tokenwarp.actorHpZero(actor, data, options, userId, tag)`
 
-HP-zero hooks fire only when an actor update includes `changes.system.attributes.hp.value <= 0`:
+HP-zero hooks fire only when an actor update includes an identifiable *zero hp source*, like `changes.system.attributes.hp.value <= 0` for D&D5e system:
 
 - `tokenwarp.preActorHpZero` during `preUpdateActor`
 - `tokenwarp.actorHpZero` during `updateActor`
