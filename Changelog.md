@@ -1,3 +1,10 @@
+## v13.351.4
+
+- Added leader-follow snake routing for multi-selected token moves.
+  - Mark a token as leader with `flags.tokenwarp.leader = true`.
+  - Other selected tokens follow the leader's waypoint path behind it with grid-based spacing.
+  - Follower tokens can explicitly target a leader with `flags.tokenwarp.leader = { follow: "<leaderTokenId>" }`.
+
 ## v13.351.3
 
 - Added trigger presets (first pass, low impact and feedback appreciated) in the Actor `Triggers` tab:

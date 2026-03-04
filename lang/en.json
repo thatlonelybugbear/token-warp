@@ -24,5 +24,15 @@
 	"TOKENWARP.PresetHpZero": "HP Zero",
 	"TOKENWARP.PresetAllEvents": "All Events",
 	"TOKENWARP.Reset": "Reset",
-	"TOKENWARP.Triggers": "Triggers"
+	"TOKENWARP.Triggers": "Triggers",
+	"TOKENWARP.LeaderNoTokenHint": "Open this dialog from a placed token to configure leader/follower snake routing.",
+	"TOKENWARP.LeaderSectionLabel": "Snake Follow Routing",
+	"TOKENWARP.LeaderRoleLabel": "Role",
+	"TOKENWARP.LeaderRoleHint": "Leader routes selected followers behind it using its movement waypoints.",
+	"TOKENWARP.LeaderRoleNone": "None",
+	"TOKENWARP.LeaderRoleLeader": "Leader",
+	"TOKENWARP.LeaderRoleFollower": "Follower",
+	"TOKENWARP.LeaderFollowLabel": "Follow Token",
+	"TOKENWARP.LeaderFollowHint": "Follower traces this token's route while keeping spacing behind the path.",
+	"TOKENWARP.LeaderFollowNone": "Select a leader token"
 }

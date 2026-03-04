@@ -93,6 +93,15 @@ In the Token Warp Actor-sheet dialog there is a `Movement animation speed` tab.
 - `Disallow out of bounds movement` clamps movement to the nearest valid destination; it does not force no-animation by itself.
 - Keybinding `Disable Token Rotation Key` is per-user. While held, it temporarily suppresses movement auto-rotation.
 
+## Leader Snake Follow (selected tokens)
+
+When multiple tokens are selected and moved together, you can designate one token as the route leader:
+
+- Set leader token flag: `token.document.setFlag("tokenwarp", "leader", true)`
+- Optional follower targeting flag shape: `token.document.setFlag("tokenwarp", "leader", { follow: "<leaderTokenId>" })`
+
+If a moved token is marked as leader, other selected tokens follow the same waypoint route behind it in a snake-like line with grid-based spacing. Tokens marked as leaders are excluded from following.
+
 <hr>
 If you like what I do, consider supporting this lonely bugbear.
 

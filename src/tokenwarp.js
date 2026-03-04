@@ -53,6 +53,12 @@ const TRIGGER_PRESETS = Object.freeze([
 	}),
 ]);
 
+function logFollowerDebug(message, context = undefined) {
+	if (!settings.debug) return;
+	if (context === undefined) console.debug('[tokenwarp][follow]', message);
+	else console.debug('[tokenwarp][follow]', message, context);
+}
+
 /*  Functions */
 export function _preUpdateToken(tdoc, changes, options, userId) {
 	if (WALLBLOCK_NO_ANIMATION_ONCE.get(tdoc) === true) {
@@ -72,6 +78,25 @@ export function _preUpdateToken(tdoc, changes, options, userId) {
 		: { x: tdoc.x, y: tdoc.y };
 	const hasDestination =
 		destination.x !== undefined || destination.y !== undefined;
+
+	// Keyboard and some movement workflows provide position updates here
+	// without a full movement operation payload.
+	if (!isMovementPayload && hasDestination) {
+		const syntheticMove = buildSyntheticMoveFromPositionUpdate(
+			tdoc,
+			changes,
+			options,
+		);
+		if (syntheticMove) {
+			logFollowerDebug('Synthetic move detected in _preUpdateToken', {
+				tokenId: tdoc?.id,
+				origin: syntheticMove.origin,
+				destination: syntheticMove.destination,
+			});
+			routeFollowersFromSyntheticMove(tdoc, syntheticMove, options);
+		}
+	}
+
 	const {
 		excludedScene,
 		movementSpeed,
@@ -230,11 +255,550 @@ export function _preUpdateToken(tdoc, changes, options, userId) {
 
 export function _preMoveToken(tokenDocument, move, options) {
 	const movementUserId = getMovementUserId(move, options);
+	routeFollowersBehindLeader(tokenDocument, move, options);
 	const ev = event;
 	if (isKeyPressed(ev, settings.disableRotationKey, 'disableRotationKey')) {
 		move.autoRotate = false;
 	}
 	return _preUpdateToken(tokenDocument, move, options, movementUserId);
+}
+
+function getLeaderFlagState(tokenDocument) {
+	const rawFlag = tokenDocument?.getFlag?.(Constants.MODULE_ID, 'leader');
+	const state = { isLeader: false, follows: null };
+	if (rawFlag === true) {
+		state.isLeader = true;
+		return state;
+	}
+	if (typeof rawFlag === 'string') {
+		const follows = rawFlag.trim();
+		if (follows.length) state.follows = follows;
+		return state;
+	}
+	if (!rawFlag || typeof rawFlag !== 'object') return state;
+
+	const followFromObject = [rawFlag.follow, rawFlag.leaderId, rawFlag.tokenId].find(
+		(value) => typeof value === 'string' && value.trim().length > 0,
+	);
+	if (followFromObject) state.follows = followFromObject.trim();
+	if (coerceBoolean(rawFlag.isLeader, false)) state.isLeader = true;
+	if (coerceBoolean(rawFlag.leader, false) && !state.follows) state.isLeader = true;
+	return state;
+}
+
+function getMovementLeaderDialogState(tokenDocument) {
+	const state = getLeaderFlagState(tokenDocument);
+	if (state.isLeader) return { role: 'leader', followTokenId: '' };
+	if (state.follows) return { role: 'follower', followTokenId: String(state.follows) };
+	return { role: 'none', followTokenId: '' };
+}
+
+function getTokenDocumentLeaderCandidateIds(tokenDocument) {
+	const ids = new Set();
+	if (tokenDocument?.id) ids.add(String(tokenDocument.id));
+	return ids;
+}
+
+function getMovementLeaderTargetOptions(tokenDocument) {
+	const currentId = tokenDocument?.id;
+	const options = Array.from(canvas?.tokens?.placeables ?? [])
+		.map((placeable) => placeable?.document)
+		.filter((document) => document?.id && document.id !== currentId)
+		.filter((document) => getLeaderFlagState(document).isLeader)
+		.map((document) => ({
+			id: String(document.id),
+			name: String(document.name ?? document.id),
+		}));
+	options.sort((a, b) => a.name.localeCompare(b.name));
+	return options;
+}
+
+async function persistMovementLeaderFlag(tokenDocument, movementLeader = {}) {
+	if (!tokenDocument?.setFlag || !tokenDocument?.unsetFlag) return;
+	const role = String(movementLeader.role ?? 'none').toLowerCase();
+	const followTokenId = String(movementLeader.followTokenId ?? '').trim();
+	if (role === 'leader') {
+		await tokenDocument.setFlag(Constants.MODULE_ID, 'leader', true);
+		return;
+	}
+	if (role === 'follower' && followTokenId) {
+		await tokenDocument.setFlag(Constants.MODULE_ID, 'leader', {
+			follow: followTokenId,
+		});
+		return;
+	}
+	await tokenDocument.unsetFlag(Constants.MODULE_ID, 'leader');
+}
+
+function getTokenDocumentPosition(tokenDocument) {
+	const x = Number(tokenDocument?.x ?? tokenDocument?._source?.x);
+	const y = Number(tokenDocument?.y ?? tokenDocument?._source?.y);
+	return {
+		x: Number.isFinite(x) ? x : 0,
+		y: Number.isFinite(y) ? y : 0,
+	};
+}
+
+function getTokenDocumentMovementWaypoint(tokenDocument, action) {
+	if (!tokenDocument) return null;
+	const x = Number(tokenDocument?._source?.x ?? tokenDocument?.x);
+	const y = Number(tokenDocument?._source?.y ?? tokenDocument?.y);
+	if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+	return {
+		x,
+		y,
+		elevation: Number(
+			tokenDocument?._source?.elevation ?? tokenDocument?.elevation ?? 0,
+		),
+		width: Number(tokenDocument?._source?.width ?? tokenDocument?.width ?? 1),
+		height: Number(tokenDocument?._source?.height ?? tokenDocument?.height ?? 1),
+		shape: tokenDocument?._source?.shape ?? tokenDocument?.shape,
+		action: normalizeMovementAction(action ?? tokenDocument?.movementAction) ?? 'walk',
+		snapped: true,
+		explicit: true,
+		checkpoint: true,
+	};
+}
+
+function getTokenGridFootprint(tokenDocument) {
+	const width = Number(tokenDocument?.width ?? tokenDocument?._source?.width);
+	const height = Number(tokenDocument?.height ?? tokenDocument?._source?.height);
+	const footprint = Math.max(
+		1,
+		Math.ceil(Number.isFinite(width) ? width : 1),
+		Math.ceil(Number.isFinite(height) ? height : 1),
+	);
+	return footprint;
+}
+
+function toMovementWaypoint(waypoint) {
+	if (!waypoint || typeof waypoint !== 'object') return null;
+	const x = Number(waypoint.x);
+	const y = Number(waypoint.y);
+	if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+
+	const cleanWaypoint = { x, y };
+	for (const key of [
+		'elevation',
+		'width',
+		'height',
+		'shape',
+		'action',
+		'snapped',
+		'explicit',
+		'checkpoint',
+	]) {
+		if (waypoint[key] !== undefined) cleanWaypoint[key] = waypoint[key];
+	}
+	return cleanWaypoint;
+}
+
+function movementWaypointsEqual(a, b) {
+	if (!a || !b) return false;
+	if (Number(a.x) !== Number(b.x)) return false;
+	if (Number(a.y) !== Number(b.y)) return false;
+	if (a.elevation === undefined || b.elevation === undefined) return true;
+	return Number(a.elevation) === Number(b.elevation);
+}
+
+function getLeaderPathWaypoints(tokenDocument, move, options) {
+	const moveWaypoints = [];
+	if (Array.isArray(move?.passed?.waypoints)) moveWaypoints.push(...move.passed.waypoints);
+	if (Array.isArray(move?.pending?.waypoints))
+		moveWaypoints.push(...move.pending.waypoints);
+
+	let sourceWaypoints = moveWaypoints.length
+		? moveWaypoints
+		: options?.movement?.[tokenDocument?.id]?.waypoints ?? [];
+	if (
+		!moveWaypoints.length &&
+		Array.isArray(sourceWaypoints) &&
+		sourceWaypoints.length &&
+		typeof tokenDocument?.getCompleteMovementPath === 'function'
+	) {
+		const origin = {
+			x: tokenDocument._source?.x ?? tokenDocument.x,
+			y: tokenDocument._source?.y ?? tokenDocument.y,
+			elevation: tokenDocument._source?.elevation ?? tokenDocument.elevation,
+			width: tokenDocument._source?.width ?? tokenDocument.width,
+			height: tokenDocument._source?.height ?? tokenDocument.height,
+			shape: tokenDocument._source?.shape ?? tokenDocument.shape,
+		};
+		try {
+			const completePath = tokenDocument.getCompleteMovementPath([
+				origin,
+				...sourceWaypoints,
+			]);
+			if (Array.isArray(completePath) && completePath.length > 1) {
+				completePath.shift();
+				sourceWaypoints = completePath;
+			}
+		} catch {}
+	}
+	const path = [];
+	for (const rawWaypoint of sourceWaypoints) {
+		const waypoint = toMovementWaypoint(rawWaypoint);
+		if (!waypoint) continue;
+		if (
+			path.length &&
+			movementWaypointsEqual(path[path.length - 1], waypoint)
+		) {
+			continue;
+		}
+		path.push(waypoint);
+	}
+	return path;
+}
+
+function getFollowerDocuments(leaderTokenDocument, move) {
+	const controlledTokens = Array.from(canvas?.tokens?.controlled ?? []);
+	if (controlledTokens.length <= 1) return [];
+
+	const leaderOrigin = move?.origin
+		? {
+				x: Number(move.origin.x),
+				y: Number(move.origin.y),
+			}
+		: getTokenDocumentPosition(leaderTokenDocument);
+
+	const followers = [];
+	const leaderCandidateIds = getTokenDocumentLeaderCandidateIds(leaderTokenDocument);
+	for (const token of controlledTokens) {
+		const followerDocument = token?.document;
+		if (!followerDocument || followerDocument.id === leaderTokenDocument?.id) {
+			continue;
+		}
+
+		const relation = getLeaderFlagState(followerDocument);
+		if (relation.isLeader) continue;
+		if (relation.follows && !leaderCandidateIds.has(String(relation.follows))) {
+			continue;
+		}
+		followers.push({
+			document: followerDocument,
+			explicit: relation.follows
+				? leaderCandidateIds.has(String(relation.follows))
+				: false,
+		});
+	}
+
+	followers.sort((a, b) => {
+		if (a.explicit !== b.explicit) return a.explicit ? -1 : 1;
+		const aPos = getTokenDocumentPosition(a.document);
+		const bPos = getTokenDocumentPosition(b.document);
+		const distA = Math.hypot(aPos.x - leaderOrigin.x, aPos.y - leaderOrigin.y);
+		const distB = Math.hypot(bPos.x - leaderOrigin.x, bPos.y - leaderOrigin.y);
+		if (distA !== distB) return distA - distB;
+		return String(a.document.id).localeCompare(String(b.document.id));
+	});
+
+	return followers.map((entry) => entry.document);
+}
+
+function getActiveLeaderTokenDocument(tokenDocument, options) {
+	const tokenState = getLeaderFlagState(tokenDocument);
+	if (tokenState.isLeader) return tokenDocument;
+
+	const controlledTokens = Array.from(canvas?.tokens?.controlled ?? []);
+	const leaderDocuments = controlledTokens
+		.map((token) => token?.document)
+		.filter((document) => document && getLeaderFlagState(document).isLeader);
+	if (!leaderDocuments.length) return null;
+	if (leaderDocuments.length === 1) return leaderDocuments[0];
+
+	const leaderWithMovement = leaderDocuments.filter(
+		(document) => options?.movement?.[document.id],
+	);
+	if (leaderWithMovement.length) return leaderWithMovement[0];
+	return leaderDocuments[0];
+}
+
+function buildFollowerWaypoints(leaderPath, trailingOffset) {
+	if (!Array.isArray(leaderPath) || !leaderPath.length) return [];
+	const maxLength = Math.max(0, leaderPath.length - trailingOffset);
+	if (maxLength === 0) return [];
+
+	const waypoints = foundry.utils.duplicate(leaderPath.slice(0, maxLength));
+	const lastWaypoint = waypoints.at(-1);
+	if (lastWaypoint) {
+		lastWaypoint.explicit = true;
+		lastWaypoint.checkpoint = true;
+	}
+	return waypoints;
+}
+
+function applyFollowerDimensionsToWaypoints(waypoints, followerDocument) {
+	if (!Array.isArray(waypoints) || !waypoints.length) return waypoints;
+	const width = Number(
+		followerDocument?._source?.width ?? followerDocument?.width,
+	);
+	const height = Number(
+		followerDocument?._source?.height ?? followerDocument?.height,
+	);
+	const shape = followerDocument?._source?.shape ?? followerDocument?.shape;
+	for (const waypoint of waypoints) {
+		if (!waypoint || typeof waypoint !== 'object') continue;
+		if (Number.isFinite(width) && width > 0) waypoint.width = width;
+		if (Number.isFinite(height) && height > 0) waypoint.height = height;
+		if (shape !== undefined) waypoint.shape = shape;
+	}
+	return waypoints;
+}
+
+function buildSyntheticMoveFromPositionUpdate(tokenDocument, changes, options) {
+	if (!tokenDocument || !changes || typeof changes !== 'object') return null;
+	if (changes.destination || changes.origin) return null;
+	const x = Number(changes.x);
+	const y = Number(changes.y);
+	if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+
+	const origin = {
+		x: Number(tokenDocument._source?.x ?? tokenDocument.x),
+		y: Number(tokenDocument._source?.y ?? tokenDocument.y),
+		elevation: Number(
+			tokenDocument._source?.elevation ?? tokenDocument.elevation ?? 0,
+		),
+		width: Number(tokenDocument._source?.width ?? tokenDocument.width ?? 1),
+		height: Number(tokenDocument._source?.height ?? tokenDocument.height ?? 1),
+		shape: tokenDocument._source?.shape ?? tokenDocument.shape,
+	};
+	if (!Number.isFinite(origin.x) || !Number.isFinite(origin.y)) return null;
+	if (origin.x === x && origin.y === y) return null;
+
+	const destination = {
+		x,
+		y,
+		elevation: origin.elevation,
+		width: origin.width,
+		height: origin.height,
+		shape: origin.shape,
+		action: tokenDocument.movementAction,
+		snapped: true,
+		explicit: true,
+		checkpoint: true,
+	};
+
+	return {
+		id: options?._movementArguments?.movementId ?? foundry.utils.randomID(),
+		origin,
+		destination: {
+			x: destination.x,
+			y: destination.y,
+			elevation: destination.elevation,
+			width: destination.width,
+			height: destination.height,
+			shape: destination.shape,
+		},
+		passed: {
+			waypoints: [destination],
+		},
+		pending: {
+			waypoints: [],
+		},
+	};
+}
+
+function routeFollowersFromSyntheticMove(tokenDocument, syntheticMove, options) {
+	if (!tokenDocument || !syntheticMove || typeof options !== 'object') return false;
+
+	const leaderTokenDocument = getActiveLeaderTokenDocument(
+		tokenDocument,
+		options,
+	);
+	if (!leaderTokenDocument) {
+		logFollowerDebug('No active leader found for synthetic move', {
+			tokenId: tokenDocument?.id,
+		});
+		return false;
+	}
+	if (leaderTokenDocument.id === tokenDocument.id) {
+		logFollowerDebug('Synthetic move is on leader token, routing directly', {
+			leaderId: leaderTokenDocument.id,
+		});
+		return routeFollowersBehindLeader(tokenDocument, syntheticMove, options);
+	}
+
+	const deltaX =
+		Number(syntheticMove.destination?.x) - Number(syntheticMove.origin?.x);
+	const deltaY =
+		Number(syntheticMove.destination?.y) - Number(syntheticMove.origin?.y);
+	if (!Number.isFinite(deltaX) || !Number.isFinite(deltaY)) {
+		logFollowerDebug('Invalid synthetic delta for follower move', {
+			tokenId: tokenDocument?.id,
+			deltaX,
+			deltaY,
+		});
+		return false;
+	}
+
+	const leaderPosition = getTokenDocumentPosition(leaderTokenDocument);
+	const leaderSyntheticMove = buildSyntheticMoveFromPositionUpdate(
+		leaderTokenDocument,
+		{
+			x: leaderPosition.x + deltaX,
+			y: leaderPosition.y + deltaY,
+		},
+		options,
+	);
+	if (!leaderSyntheticMove) {
+		logFollowerDebug('Unable to build synthetic move for resolved leader', {
+			tokenId: tokenDocument?.id,
+			leaderId: leaderTokenDocument.id,
+			deltaX,
+			deltaY,
+		});
+		return false;
+	}
+	const routed = routeFollowersBehindLeader(
+		leaderTokenDocument,
+		leaderSyntheticMove,
+		options,
+	);
+	logFollowerDebug('Synthetic follower route via leader resolved', {
+		tokenId: tokenDocument?.id,
+		leaderId: leaderTokenDocument.id,
+		deltaX,
+		deltaY,
+		routed,
+	});
+	return routed;
+}
+
+function routeFollowersBehindLeader(tokenDocument, move, options) {
+	if (!tokenDocument || !move || typeof options !== 'object') return false;
+
+	const leaderTokenDocument = getActiveLeaderTokenDocument(
+		tokenDocument,
+		options,
+	);
+	if (!leaderTokenDocument) {
+		logFollowerDebug('No active leader found in routeFollowersBehindLeader', {
+			tokenId: tokenDocument?.id,
+		});
+		return false;
+	}
+
+	const routingState = options._tokenwarpSnakeRoute;
+	if (routingState?.leaderId === leaderTokenDocument.id) {
+		logFollowerDebug('Skipping duplicate snake routing for leader in same options', {
+			leaderId: leaderTokenDocument.id,
+			movementId: move?.id,
+		});
+		return false;
+	}
+
+	const followers = getFollowerDocuments(leaderTokenDocument, move);
+	if (!followers.length) {
+		logFollowerDebug('No follower tokens eligible for leader move', {
+			leaderId: leaderTokenDocument.id,
+		});
+		return false;
+	}
+
+	const leaderPath = getLeaderPathWaypoints(
+		leaderTokenDocument,
+		leaderTokenDocument.id === tokenDocument.id ? move : null,
+		options,
+	);
+	if (!leaderPath.length) {
+		logFollowerDebug('No leader path waypoints available for snake routing', {
+			leaderId: leaderTokenDocument.id,
+		});
+		return false;
+	}
+	logFollowerDebug('Routing followers behind leader', {
+		leaderId: leaderTokenDocument.id,
+		followerCount: followers.length,
+		leaderPathLength: leaderPath.length,
+	});
+
+	options.movement ??= {};
+	const leaderMovementData = foundry.utils.duplicate(
+		options.movement?.[leaderTokenDocument.id] ?? {},
+	);
+	const leadAction = leaderPath[0]?.action;
+	const leaderOriginWaypoint =
+		toMovementWaypoint({
+			...(move.origin ?? {}),
+			action: leadAction,
+			snapped: true,
+			explicit: true,
+			checkpoint: true,
+		}) ?? getTokenDocumentMovementWaypoint(leaderTokenDocument, leadAction);
+	const stepSnake = leaderPath.length <= 1 && !!leaderOriginWaypoint;
+	let trailingWaypoint = leaderOriginWaypoint
+		? foundry.utils.duplicate(leaderOriginWaypoint)
+		: null;
+
+	let trailingOffset = 0;
+	let previousFootprint = getTokenGridFootprint(leaderTokenDocument);
+	const leaderCandidateIds = getTokenDocumentLeaderCandidateIds(leaderTokenDocument);
+	for (const followerDocument of followers) {
+		if (leaderCandidateIds.has(String(followerDocument.id))) continue;
+		const followerFootprint = getTokenGridFootprint(followerDocument);
+		trailingOffset += Math.max(previousFootprint, followerFootprint);
+
+		const followerMovementData = foundry.utils.duplicate(
+			options.movement?.[followerDocument.id] ?? leaderMovementData,
+		);
+		if (stepSnake && trailingWaypoint) {
+			const followerWaypoints = [foundry.utils.duplicate(trailingWaypoint)];
+			applyFollowerDimensionsToWaypoints(followerWaypoints, followerDocument);
+			followerMovementData.waypoints = followerWaypoints;
+			trailingWaypoint = getTokenDocumentMovementWaypoint(
+				followerDocument,
+				leadAction,
+			);
+		} else {
+			let followerWaypoints = buildFollowerWaypoints(
+				leaderPath,
+				trailingOffset,
+			);
+			// Prevent fallback to Foundry's translated mirror movement
+			// when a follower has no segment to advance this step.
+			if (!followerWaypoints.length) {
+				const holdWaypoint = getTokenDocumentMovementWaypoint(
+					followerDocument,
+					leadAction,
+				);
+				if (holdWaypoint) followerWaypoints = [holdWaypoint];
+			}
+			applyFollowerDimensionsToWaypoints(followerWaypoints, followerDocument);
+			followerMovementData.waypoints = followerWaypoints;
+		}
+		logFollowerDebug('Follower waypoints assigned', {
+			leaderId: leaderTokenDocument.id,
+			followerId: followerDocument.id,
+			waypointCount: Array.isArray(followerMovementData.waypoints)
+				? followerMovementData.waypoints.length
+				: 0,
+			stepSnake,
+		});
+		if (!followerMovementData.method && leaderMovementData.method) {
+			followerMovementData.method = leaderMovementData.method;
+		}
+		if (
+			followerMovementData.constrainOptions === undefined &&
+			leaderMovementData.constrainOptions !== undefined
+		) {
+			followerMovementData.constrainOptions = foundry.utils.duplicate(
+				leaderMovementData.constrainOptions,
+			);
+		}
+		options.movement[followerDocument.id] = followerMovementData;
+		previousFootprint = followerFootprint;
+	}
+
+	options._tokenwarpSnakeRoute = {
+		leaderId: leaderTokenDocument.id,
+		movementId: move.id,
+	};
+	logFollowerDebug('Follower routing complete', {
+		leaderId: leaderTokenDocument.id,
+		movementId: move?.id,
+		followerCount: followers.length,
+	});
+	return true;
 }
 
 function getCurrentSegmentWaypoints({ changes, fallbackDestination }) {
@@ -643,13 +1207,34 @@ function extractDialogChoiceParts(formObject) {
 				: {};
 	}
 
-	const triggers = foundry.utils.duplicate(expanded);
-	delete triggers.movementAnimation;
-	for (const key of Object.keys(triggers)) {
-		if (key.startsWith('movementAnimation.')) delete triggers[key];
+	let movementLeader =
+		expanded?.movementLeader && typeof expanded.movementLeader === 'object'
+			? foundry.utils.duplicate(expanded.movementLeader)
+			: {};
+
+	if (!Object.keys(movementLeader).length) {
+		const dottedLeader = {};
+		for (const [key, value] of Object.entries(raw)) {
+			if (!key.startsWith('movementLeader.')) continue;
+			foundry.utils.setProperty(dottedLeader, key, value);
+		}
+		const dottedExpanded = foundry.utils.expandObject(dottedLeader);
+		movementLeader =
+			dottedExpanded?.movementLeader &&
+			typeof dottedExpanded.movementLeader === 'object'
+				? foundry.utils.duplicate(dottedExpanded.movementLeader)
+				: {};
 	}
 
-	return { triggers, movementAnimation };
+	const triggers = foundry.utils.duplicate(expanded);
+	delete triggers.movementAnimation;
+	delete triggers.movementLeader;
+	for (const key of Object.keys(triggers)) {
+		if (key.startsWith('movementAnimation.')) delete triggers[key];
+		if (key.startsWith('movementLeader.')) delete triggers[key];
+	}
+
+	return { triggers, movementAnimation, movementLeader };
 }
 
 function getTriggerPreset(id) {
@@ -701,14 +1286,18 @@ function resetTriggerPresetValues({ presetId, triggerInputs }) {
 }
 
 async function _renderDialog() {
-	const token = this.token; //Token#Document
-	const actor = token?.actor || this.actor;
+	const tokenRef = this.token; // Token placeable or TokenDocument
+	const rawTokenDocument = tokenRef?.document ?? tokenRef ?? null;
+	const actor = rawTokenDocument?.actor || tokenRef?.actor || this.actor;
 	if (!actor) return;
+	const tokenDocument = rawTokenDocument ?? null;
 
 	const isDnd5e = game?.system?.id === 'dnd5e';
 	const hasHpZeroSupport = actorHasHpRollData(actor);
 	const twTriggers = actor.getFlag('tokenwarp', 'tokenTriggers') || {};
 	const savedAnimation = actor.getFlag('tokenwarp', 'movementAnimation') || {};
+	const savedLeaderState = getMovementLeaderDialogState(tokenDocument);
+	const leaderTargetOptions = getMovementLeaderTargetOptions(tokenDocument);
 	const savedOverride = coerceBoolean(savedAnimation.override, false);
 	const worldDefaultSpeed = game.settings.get(
 		Constants.MODULE_ID,
@@ -858,6 +1447,61 @@ async function _renderDialog() {
         </div>
     `;
 
+	const movementLeaderContent = (() => {
+		if (!tokenDocument?.id) {
+			return `<p class="notes">${game.i18n.localize('TOKENWARP.LeaderNoTokenHint')}</p>`;
+		}
+		const selectedRole = savedLeaderState.role;
+		const selectedFollowTokenId = savedLeaderState.followTokenId;
+		const roleOptions = [
+			{ value: 'none', label: game.i18n.localize('TOKENWARP.LeaderRoleNone') },
+			{
+				value: 'leader',
+				label: game.i18n.localize('TOKENWARP.LeaderRoleLeader'),
+			},
+			{
+				value: 'follower',
+				label: game.i18n.localize('TOKENWARP.LeaderRoleFollower'),
+			},
+		]
+			.map(
+				(option) =>
+					`<option value="${option.value}" ${option.value === selectedRole ? 'selected' : ''}>${option.label}</option>`,
+			)
+			.join('');
+
+		let followOptions = `<option value="">${game.i18n.localize('TOKENWARP.LeaderFollowNone')}</option>`;
+		for (const option of leaderTargetOptions) {
+			followOptions += `<option value="${option.id}" ${option.id === selectedFollowTokenId ? 'selected' : ''}>${foundry.utils.escapeHTML(option.name)} (${option.id})</option>`;
+		}
+		if (
+			selectedRole === 'follower' &&
+			selectedFollowTokenId &&
+			!leaderTargetOptions.some((option) => option.id === selectedFollowTokenId)
+		) {
+			followOptions += `<option value="${selectedFollowTokenId}" selected>${selectedFollowTokenId}</option>`;
+		}
+
+		return `
+      <hr>
+      <h3 style="margin: 0 0 0.5rem;">${game.i18n.localize('TOKENWARP.LeaderSectionLabel')}</h3>
+      <div class="form-group">
+        <label>${game.i18n.localize('TOKENWARP.LeaderRoleLabel')}</label>
+        <div class="form-fields">
+          <select name="movementLeader.role" data-tw-leader-role>${roleOptions}</select>
+        </div>
+        <p class="hint">${game.i18n.localize('TOKENWARP.LeaderRoleHint')}</p>
+      </div>
+      <div class="form-group" data-tw-follow-row>
+        <label>${game.i18n.localize('TOKENWARP.LeaderFollowLabel')}</label>
+        <div class="form-fields">
+          <select name="movementLeader.followTokenId">${followOptions}</select>
+        </div>
+        <p class="hint">${game.i18n.localize('TOKENWARP.LeaderFollowHint')}</p>
+      </div>
+    `;
+	})();
+
 	const content = `
         <div class="tw-tabs" data-group="tokenwarp">
             <nav class="tabs" data-group="tokenwarp" aria-label="Token Warp tabs">
@@ -871,6 +1515,7 @@ async function _renderDialog() {
             </div>
             <div class="tab" data-tab="animation" data-group="tokenwarp">
                 ${animationContent}
+                ${movementLeaderContent}
             </div>
             </section>
         </div>
@@ -1008,6 +1653,25 @@ async function _renderDialog() {
 					overrideInput.addEventListener('change', applyOverrideUI);
 				}
 				applyOverrideUI();
+
+				const leaderRoleInput = dialog.element.querySelector(
+					"select[name='movementLeader.role']",
+				);
+				const followerRow = dialog.element.querySelector('[data-tw-follow-row]');
+				const applyLeaderRoleUI = () => {
+					if (!(followerRow instanceof HTMLElement)) return;
+					const isFollower = leaderRoleInput?.value === 'follower';
+					followerRow.style.display = isFollower ? '' : 'none';
+					followerRow
+						.querySelectorAll('input, select, textarea, button')
+						.forEach((el) => {
+							el.disabled = !isFollower;
+						});
+				};
+				if (leaderRoleInput) {
+					leaderRoleInput.addEventListener('change', applyLeaderRoleUI);
+				}
+				applyLeaderRoleUI();
 
 				const applyInputValue = (input, value) => {
 					if (!(input instanceof HTMLInputElement)) return false;
@@ -1148,6 +1812,7 @@ async function _renderDialog() {
 	const {
 		triggers: triggerChoices,
 		movementAnimation: movementAnimationChoices,
+		movementLeader: movementLeaderChoices,
 	} = extractDialogChoiceParts(choices);
 
 	await actor.setFlag('tokenwarp', 'tokenTriggers', triggerChoices ?? {});
@@ -1180,6 +1845,8 @@ async function _renderDialog() {
 			speed: clampAnimationSpeed(movementAnimation.speed, fallback),
 		});
 	}
+
+	await persistMovementLeaderFlag(tokenDocument, movementLeaderChoices);
 
 	return choices;
 }
