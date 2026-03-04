@@ -8,3 +8,7 @@ release/
 releases/
 *.zip
 *.tar.gz
+
+# Local handoff notes (do not sync)
+SESSION_NOTES.md
+TODO.md
