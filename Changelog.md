@@ -1,3 +1,7 @@
+## v14.359.1
+
+- Verified compatibility with Foundry v14.359
+
 ## v13.351.4
 
 - Added leader-follow snake routing for multi-selected token moves.
