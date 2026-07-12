@@ -1,39 +1,39 @@
 {
-  "id": "tokenwarp",
-  "title": "Token Warp",
-  "description": "A small module for Foundry VTT, helping GMs to avoid revealing their maps by automatically removing tokens movement animation when going through walls.",
-  "version": "14.364.1",
-  "authors": [
-    {
-      "name": "thatlonelybugbear",
-      "url": "https://github.com/thatlonelybugbear",
-      "discord": "thatlonelybugbear",
-      "ko-fi": "https://ko-fi.com/thatlonelybugbear"
-    }
-  ],
-  "compatibility": {
-    "maximum": "14",
-    "minimum": "14.364",
-    "verified": "14.364"
-  },
-  "esmodules": ["src/setup.js"],
-  "relationships": { },
-  "languages": [
-    {
-      "lang": "en",
-      "name": "English",
-      "path": "lang/en.json",
-      "flags": {}
-    }
-  ],
-  "flags": {
-    "hotReload": { "paths": ["lang/en.json"] },
-    "allowbugreporter": true
-  },
-  "bugs": "https://github.com/thatlonelybugbear/token-warp/issues",
-  "url": "https://github.com/thatlonelybugbear/token-warp",
-  "license": "https://raw.githubusercontent.com/thatlonelybugbear/token-warp/main/LICENSE",
-  "manifest": "https://github.com/thatlonelybugbear/token-warp/releases/latest/download/module.json",
-  "download": "https://github.com/thatlonelybugbear/token-warp/releases/download/v14.364.1/module.zip",
-  "changelog": "https://raw.githubusercontent.com/thatlonelybugbear/token-warp/main/Changelog.md"
+	"id": "tokenwarp",
+	"title": "Token Warp",
+	"description": "A small module for Foundry VTT, helping GMs to avoid revealing their maps by automatically removing tokens movement animation when going through walls.",
+	"version": "14.364.1",
+	"authors": [
+		{
+			"name": "thatlonelybugbear",
+			"url": "https://github.com/thatlonelybugbear",
+			"discord": "thatlonelybugbear",
+			"ko-fi": "https://ko-fi.com/thatlonelybugbear"
+		}
+	],
+	"compatibility": {
+		"maximum": "14",
+		"minimum": "14.364",
+		"verified": "14.364"
+	},
+	"esmodules": ["src/setup.js"],
+	"relationships": {},
+	"languages": [
+		{
+			"lang": "en",
+			"name": "English",
+			"path": "lang/en.json",
+			"flags": {}
+		}
+	],
+	"flags": {
+		"hotReload": { "paths": ["lang/en.json"] },
+		"allowbugreporter": true
+	},
+	"bugs": "https://github.com/thatlonelybugbear/token-warp/issues",
+	"url": "https://github.com/thatlonelybugbear/token-warp",
+	"license": "https://raw.githubusercontent.com/thatlonelybugbear/token-warp/main/LICENSE",
+	"manifest": "https://github.com/thatlonelybugbear/token-warp/releases/latest/download/module.json",
+	"download": "https://github.com/thatlonelybugbear/token-warp/releases/download/v14.364.1/module.zip",
+	"changelog": "https://raw.githubusercontent.com/thatlonelybugbear/token-warp/main/Changelog.md"
 }

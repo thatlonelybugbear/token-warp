@@ -2,9 +2,7 @@ import {
 	registerMovementModePaths,
 	registerMovementModeProvider,
 } from './speedProviders.js';
-import {
-	registerHitPointProvider,
-} from './hitPointProviders.js';
+import { registerHitPointProvider } from './hitPointProviders.js';
 
 async function moduleExists(path) {
 	const response = await fetch(new URL(path, import.meta.url), {

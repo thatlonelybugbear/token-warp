@@ -2,14 +2,15 @@
 
 - Updated minimum and verified Foundry compatibility to v14.364.
 - Added system integration providers for movement speeds and HP-zero support, with built-in dnd5e providers.
-- Added dynamic system integration loading from `src/integrations/speeds/<system-id>.js` and `src/integrations/hit-points/<system-id>.js`.
+  - Added dynamic system integration loading from `src/integrations/speeds/<system-id>.js` and `src/integrations/hit-points/<system-id>.js`.
 - Updated the Actor sheet button/dialog label from `Token Warp Triggers` to `Token Warp Menu`.
 - Added linked-token selection for Actor sheet Token Warp Menu configuration when an actor has multiple active tokens.
+  - Linked-token menu selection now pans to hovered token options when needed and restores/pans back to the previously controlled token selection.
 - Preserved macro payload compatibility aliases for `changes` and `context` with Foundry v14-style deprecation warnings.
 - Updated macro trigger `user` payloads to expose the Foundry User document while retaining `userId`.
 - Added actor guards for token trigger execution when a placed token no longer has an actor document.
 - Migrated legacy movement animation speed flag objects to the new `movementAnimation.speeds` schema when read.
-- Fixed snake follower waypoint routing by preventing inherited leader checkpoints from splitting follower movement early.
+- Fixed snake follower waypoint routing.
 - Updated keyboard shortcut handling to use Foundry's native keyboard manager pressed-key state.
 
 ## v14.359.1

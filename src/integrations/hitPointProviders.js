@@ -67,10 +67,7 @@ function getHpConfig(actorDocument) {
 			const config = normalizeHpConfig(provider(actorDocument));
 			if (config) return config;
 		} catch (error) {
-			console.warn(
-				`${name}: HP provider failed and was ignored.`,
-				error,
-			);
+			console.warn(`${name}: HP provider failed and was ignored.`, error);
 		}
 	}
 	return getDefaultRollDataHpConfig(actorDocument, { warn: true });
@@ -129,7 +126,8 @@ export function isHpZeroUpdate(actorDocument, changes) {
 	if (!actorDocument) return false;
 	const config = getHpConfig(actorDocument);
 	if (!config) return false;
-	if (!foundry.utils.hasProperty(changes ?? {}, config.updatePath)) return false;
+	if (!foundry.utils.hasProperty(changes ?? {}, config.updatePath))
+		return false;
 	const hpValue = Number(foundry.utils.getProperty(changes, config.updatePath));
 	return Number.isFinite(hpValue) && hpValue <= 0;
 }

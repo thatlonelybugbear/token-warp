@@ -7,7 +7,9 @@ const MOVEMENT_MODE_PROVIDERS = new Map();
 
 function normalizeMovementModePathEntry(entry) {
 	if (!entry || typeof entry !== 'object') return null;
-	const key = String(entry.key ?? '').trim().toLowerCase();
+	const key = String(entry.key ?? '')
+		.trim()
+		.toLowerCase();
 	const valuePath = String(entry.valuePath ?? entry.path ?? '').trim();
 	if (!key || !valuePath) return null;
 	const label = typeof entry.label === 'string' ? entry.label : undefined;
@@ -16,7 +18,9 @@ function normalizeMovementModePathEntry(entry) {
 
 function normalizeMovementModeEntry(entry) {
 	if (!entry || typeof entry !== 'object') return null;
-	const key = String(entry.key ?? '').trim().toLowerCase();
+	const key = String(entry.key ?? '')
+		.trim()
+		.toLowerCase();
 	const value = Number(entry.value);
 	if (!key || !Number.isFinite(value) || value <= 0) return null;
 	const label = typeof entry.label === 'string' ? entry.label : undefined;
@@ -95,7 +99,10 @@ export function getMovementModes(actor) {
 		try {
 			entries = provider(actor);
 		} catch (error) {
-			console.warn(`${name}: movement mode provider failed and was ignored.`, error);
+			console.warn(
+				`${name}: movement mode provider failed and was ignored.`,
+				error,
+			);
 			continue;
 		}
 		if (!Array.isArray(entries)) continue;
