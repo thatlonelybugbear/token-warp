@@ -1,5 +1,6 @@
 import Settings from './settings.js';
 import Constants from './constants.js';
+import { registerBuiltinIntegrations } from './integrations/integrations.js';
 import * as tokenwarp from './tokenwarp.js';
 
 const settings = new Settings();
@@ -9,43 +10,14 @@ Hooks.once('init', () => {
 });
 
 Hooks.once('ready', async () => {
-	const migrationID = '11.3.1';
-	const migration = game.settings.get(Constants.MODULE_ID, Settings.MIGRATIONS);
-	if (migration !== migrationID) {
-		console.warn(`${Constants.MODULE_NAME}: Migration to ${migrationID}`);
-		const migrateTo = settings.movementSwitchOLD
-			? 'noanimations'
-			: settings.wallBlock
-				? 'wallsblock'
-				: 'default';
-		await game.settings.set(
-			Constants.MODULE_ID,
-			Settings.TOKEN_ANIMATION_SWITCH,
-			migrateTo,
-		);
-		await game.settings.set(
-			Constants.MODULE_ID,
-			Settings.DEFAULT_TOKEN_ANIMATION_SWITCH_OLD,
-			false,
-		);
-		await game.settings.set(
-			Constants.MODULE_ID,
-			Settings.WALLS_CANCEL_TOKEN_ANIMATION_GM,
-			false,
-		);
-		await game.settings.set(
-			Constants.MODULE_ID,
-			Settings.MIGRATIONS,
-			migrationID,
-		);
-		console.warn(
-			`${Constants.MODULE_NAME}: migration to ${migrationID} complete`,
-		);
-	}
-
+	await registerBuiltinIntegrations();
 	const api = Object.freeze({
 		supportsHpRollData: tokenwarp.supportsHpRollData,
+		registerHitPointProvider: tokenwarp.registerHitPointProvider,
 		registerHpRollDataSupportCheck: tokenwarp.registerHpRollDataSupportCheck,
+		registerMovementModePath: tokenwarp.registerMovementModePath,
+		registerMovementModePaths: tokenwarp.registerMovementModePaths,
+		registerMovementModeProvider: tokenwarp.registerMovementModeProvider,
 	});
 	const module = game.modules.get(Constants.MODULE_ID);
 	if (module) module.api = api;
@@ -69,12 +41,4 @@ Hooks.once('ready', async () => {
 		'getHeaderControlsActorSheetV2',
 		tokenwarp._addActorSheetHeaderButton,
 	);
-});
-
-Hooks.once('tokenwarp.ready', (api) => {
-	api.registerHpRollDataSupportCheck((actor) => {
-		const hp = actor?.getRollData?.()?.resources?.health;
-		if (!hp || typeof hp !== 'object') return false;
-		return 'value' in hp && 'max' in hp;
-	});
 });

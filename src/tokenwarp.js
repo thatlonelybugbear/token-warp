@@ -1,12 +1,26 @@
 import Settings from './settings.js';
 import Constants from './constants.js';
+import {
+	isHpZeroUpdate,
+	supportsHpRollData as actorHasHpRollData,
+} from './integrations/hitPointProviders.js';
+import { getMovementModes } from './integrations/speedProviders.js';
+export {
+	registerHitPointProvider,
+	registerHpRollDataSupportCheck,
+	supportsHpRollData,
+} from './integrations/hitPointProviders.js';
+export {
+	registerMovementModePath,
+	registerMovementModePaths,
+	registerMovementModeProvider,
+} from './integrations/speedProviders.js';
 
 const settings = new Settings();
 const name = Constants.MODULE_NAME;
 const WALLBLOCK_NO_ANIMATION_ONCE = new WeakMap();
+const MOVEMENT_ANIMATION_FLAG_MIGRATIONS = new WeakSet();
 const LEGACY_HOOK_ARG_WARNINGS = new Set();
-const HP_ROLL_DATA_SUPPORT_CHECKS = [];
-let HP_ROLL_DATA_SUPPORTED_ACTORS = new WeakSet();
 const triggers = [
 	'All hooks',
 	'Pre token creation',
@@ -53,12 +67,6 @@ const TRIGGER_PRESETS = Object.freeze([
 	}),
 ]);
 
-function logFollowerDebug(message, context = undefined) {
-	if (!settings.debug) return;
-	if (context === undefined) console.debug('[tokenwarp][follow]', message);
-	else console.debug('[tokenwarp][follow]', message, context);
-}
-
 /*  Functions */
 export function _preUpdateToken(tdoc, changes, options, userId) {
 	if (WALLBLOCK_NO_ANIMATION_ONCE.get(tdoc) === true) {
@@ -87,14 +95,7 @@ export function _preUpdateToken(tdoc, changes, options, userId) {
 			changes,
 			options,
 		);
-		if (syntheticMove) {
-			logFollowerDebug('Synthetic move detected in _preUpdateToken', {
-				tokenId: tdoc?.id,
-				origin: syntheticMove.origin,
-				destination: syntheticMove.destination,
-			});
-			routeFollowersFromSyntheticMove(tdoc, syntheticMove, options);
-		}
+		if (syntheticMove) routeFollowersFromSyntheticMove(tdoc, syntheticMove, options);
 	}
 
 	const {
@@ -103,7 +104,6 @@ export function _preUpdateToken(tdoc, changes, options, userId) {
 		movementSwitch,
 		outOfBounds,
 		debug,
-		migration,
 		teleportKey,
 	} = settings;
 
@@ -120,8 +120,7 @@ export function _preUpdateToken(tdoc, changes, options, userId) {
 		return true;
 	const isGM = game.users.get(userId)?.isGM ?? game.user?.isGM;
 	const token = tdoc.object;
-	const ev = event;
-	const hasKey = isKeyPressed(ev, teleportKey);
+	const hasKey = isKeyPressed(teleportKey);
 	const shouldInstantTeleport = !!isGM && hasKey;
 
 	const isMoveOutOfBounds =
@@ -133,7 +132,6 @@ export function _preUpdateToken(tdoc, changes, options, userId) {
 			movementSwitch,
 			outOfBounds,
 			debug,
-			migration,
 			origin,
 			isMoveOutOfBounds,
 			destination,
@@ -256,8 +254,7 @@ export function _preUpdateToken(tdoc, changes, options, userId) {
 export function _preMoveToken(tokenDocument, move, options) {
 	const movementUserId = getMovementUserId(move, options);
 	routeFollowersBehindLeader(tokenDocument, move, options);
-	const ev = event;
-	if (isKeyPressed(ev, settings.disableRotationKey, 'disableRotationKey')) {
+	if (isKeyPressed(settings.disableRotationKey, 'disableRotationKey')) {
 		move.autoRotate = false;
 	}
 	return _preUpdateToken(tokenDocument, move, options, movementUserId);
@@ -520,9 +517,11 @@ function buildFollowerWaypoints(leaderPath, trailingOffset) {
 
 	const waypoints = foundry.utils.duplicate(leaderPath.slice(0, maxLength));
 	const lastWaypoint = waypoints.at(-1);
+	for (const waypoint of waypoints) {
+		waypoint.checkpoint = false;
+	}
 	if (lastWaypoint) {
 		lastWaypoint.explicit = true;
-		lastWaypoint.checkpoint = true;
 	}
 	return waypoints;
 }
@@ -605,16 +604,8 @@ function routeFollowersFromSyntheticMove(tokenDocument, syntheticMove, options) 
 		tokenDocument,
 		options,
 	);
-	if (!leaderTokenDocument) {
-		logFollowerDebug('No active leader found for synthetic move', {
-			tokenId: tokenDocument?.id,
-		});
-		return false;
-	}
+	if (!leaderTokenDocument) return false;
 	if (leaderTokenDocument.id === tokenDocument.id) {
-		logFollowerDebug('Synthetic move is on leader token, routing directly', {
-			leaderId: leaderTokenDocument.id,
-		});
 		return routeFollowersBehindLeader(tokenDocument, syntheticMove, options);
 	}
 
@@ -622,14 +613,7 @@ function routeFollowersFromSyntheticMove(tokenDocument, syntheticMove, options) 
 		Number(syntheticMove.destination?.x) - Number(syntheticMove.origin?.x);
 	const deltaY =
 		Number(syntheticMove.destination?.y) - Number(syntheticMove.origin?.y);
-	if (!Number.isFinite(deltaX) || !Number.isFinite(deltaY)) {
-		logFollowerDebug('Invalid synthetic delta for follower move', {
-			tokenId: tokenDocument?.id,
-			deltaX,
-			deltaY,
-		});
-		return false;
-	}
+	if (!Number.isFinite(deltaX) || !Number.isFinite(deltaY)) return false;
 
 	const leaderPosition = getTokenDocumentPosition(leaderTokenDocument);
 	const leaderSyntheticMove = buildSyntheticMoveFromPositionUpdate(
@@ -641,27 +625,13 @@ function routeFollowersFromSyntheticMove(tokenDocument, syntheticMove, options) 
 		options,
 	);
 	if (!leaderSyntheticMove) {
-		logFollowerDebug('Unable to build synthetic move for resolved leader', {
-			tokenId: tokenDocument?.id,
-			leaderId: leaderTokenDocument.id,
-			deltaX,
-			deltaY,
-		});
 		return false;
 	}
-	const routed = routeFollowersBehindLeader(
+	return routeFollowersBehindLeader(
 		leaderTokenDocument,
 		leaderSyntheticMove,
 		options,
 	);
-	logFollowerDebug('Synthetic follower route via leader resolved', {
-		tokenId: tokenDocument?.id,
-		leaderId: leaderTokenDocument.id,
-		deltaX,
-		deltaY,
-		routed,
-	});
-	return routed;
 }
 
 function routeFollowersBehindLeader(tokenDocument, move, options) {
@@ -671,46 +641,20 @@ function routeFollowersBehindLeader(tokenDocument, move, options) {
 		tokenDocument,
 		options,
 	);
-	if (!leaderTokenDocument) {
-		logFollowerDebug('No active leader found in routeFollowersBehindLeader', {
-			tokenId: tokenDocument?.id,
-		});
-		return false;
-	}
+	if (!leaderTokenDocument) return false;
 
 	const routingState = options._tokenwarpSnakeRoute;
-	if (routingState?.leaderId === leaderTokenDocument.id) {
-		logFollowerDebug('Skipping duplicate snake routing for leader in same options', {
-			leaderId: leaderTokenDocument.id,
-			movementId: move?.id,
-		});
-		return false;
-	}
+	if (routingState?.leaderId === leaderTokenDocument.id) return false;
 
 	const followers = getFollowerDocuments(leaderTokenDocument, move);
-	if (!followers.length) {
-		logFollowerDebug('No follower tokens eligible for leader move', {
-			leaderId: leaderTokenDocument.id,
-		});
-		return false;
-	}
+	if (!followers.length) return false;
 
 	const leaderPath = getLeaderPathWaypoints(
 		leaderTokenDocument,
 		leaderTokenDocument.id === tokenDocument.id ? move : null,
 		options,
 	);
-	if (!leaderPath.length) {
-		logFollowerDebug('No leader path waypoints available for snake routing', {
-			leaderId: leaderTokenDocument.id,
-		});
-		return false;
-	}
-	logFollowerDebug('Routing followers behind leader', {
-		leaderId: leaderTokenDocument.id,
-		followerCount: followers.length,
-		leaderPathLength: leaderPath.length,
-	});
+	if (!leaderPath.length) return false;
 
 	options.movement ??= {};
 	const leaderMovementData = foundry.utils.duplicate(
@@ -766,14 +710,6 @@ function routeFollowersBehindLeader(tokenDocument, move, options) {
 			applyFollowerDimensionsToWaypoints(followerWaypoints, followerDocument);
 			followerMovementData.waypoints = followerWaypoints;
 		}
-		logFollowerDebug('Follower waypoints assigned', {
-			leaderId: leaderTokenDocument.id,
-			followerId: followerDocument.id,
-			waypointCount: Array.isArray(followerMovementData.waypoints)
-				? followerMovementData.waypoints.length
-				: 0,
-			stepSnake,
-		});
 		if (!followerMovementData.method && leaderMovementData.method) {
 			followerMovementData.method = leaderMovementData.method;
 		}
@@ -793,11 +729,6 @@ function routeFollowersBehindLeader(tokenDocument, move, options) {
 		leaderId: leaderTokenDocument.id,
 		movementId: move.id,
 	};
-	logFollowerDebug('Follower routing complete', {
-		leaderId: leaderTokenDocument.id,
-		movementId: move?.id,
-		followerCount: followers.length,
-	});
 	return true;
 }
 
@@ -816,66 +747,6 @@ function getCurrentSegmentWaypoints({ changes, fallbackDestination }) {
 	}
 
 	return [];
-}
-
-function hasDefaultHpRollData(actorDocument) {
-	if (typeof actorDocument?.getRollData !== 'function') return false;
-
-	let rollData;
-	try {
-		rollData = actorDocument.getRollData();
-	} catch {
-		return false;
-	}
-
-	return !!(
-		rollData &&
-		typeof rollData === 'object' &&
-		foundry.utils.hasProperty(rollData, 'attributes.hp.value') &&
-		foundry.utils.hasProperty(rollData, 'attributes.hp.max')
-	);
-}
-
-function hasCustomHpRollDataSupport(actorDocument) {
-	for (const check of HP_ROLL_DATA_SUPPORT_CHECKS) {
-		try {
-			if (check(actorDocument) === true) return true;
-		} catch (error) {
-			console.warn(
-				`${name}: custom HP support check failed and was ignored.`,
-				error,
-			);
-		}
-	}
-	return false;
-}
-
-export function registerHpRollDataSupportCheck(
-	check,
-	{ prepend = false } = {},
-) {
-	if (typeof check !== 'function') return false;
-	if (!HP_ROLL_DATA_SUPPORT_CHECKS.includes(check)) {
-		if (prepend) HP_ROLL_DATA_SUPPORT_CHECKS.unshift(check);
-		else HP_ROLL_DATA_SUPPORT_CHECKS.push(check);
-	}
-	HP_ROLL_DATA_SUPPORTED_ACTORS = new WeakSet();
-	return true;
-}
-
-export function supportsHpRollData(actorDocument) {
-	return actorHasHpRollData(actorDocument);
-}
-
-function actorHasHpRollData(actorDocument) {
-	if (!actorDocument) return false;
-	if (game?.system?.id === 'dnd5e') return true;
-	if (HP_ROLL_DATA_SUPPORTED_ACTORS.has(actorDocument)) return true;
-	const supportsHpRollData =
-		hasDefaultHpRollData(actorDocument) ||
-		hasCustomHpRollDataSupport(actorDocument);
-	if (supportsHpRollData) HP_ROLL_DATA_SUPPORTED_ACTORS.add(actorDocument);
-	return supportsHpRollData;
 }
 
 function getRemainingPlannedWaypoints({ options, id, destination }) {
@@ -926,9 +797,9 @@ function setLastWayPoint({ options, x, y, id }) {
 	return { waypoints: tokenMovementArray };
 }
 
-function isKeyPressed(ev, key, action = 'teleportKey') {
+function isKeyPressed(key, action = 'teleportKey') {
 	const { MODIFIER_CODES: CODES, MODIFIER_KEYS } =
-		foundry.helpers?.interaction?.KeyboardManager ?? KeyboardManager;
+		foundry.helpers.interaction.KeyboardManager;
 
 	/**
 	 * Track which KeyboardEvent#code presses associate with each modifier.
@@ -942,17 +813,19 @@ function isKeyPressed(ev, key, action = 'teleportKey') {
 		Shift: CODES.Shift,
 	};
 
-	function areKeysPressed(event, action) {
-		if (!event) return false;
+	function areKeysPressed(action) {
 		const activeModifiers = {};
-		const addModifiers = (key, pressed) => {
+		const addModifiers = (key) => {
+			const pressed = MODIFIER_CODES[key].some((code) =>
+				game.keyboard.downKeys.has(code),
+			);
 			activeModifiers[key] = pressed;
 			MODIFIER_CODES[key].forEach((n) => (activeModifiers[n] = pressed));
 		};
-		addModifiers(MODIFIER_KEYS.ALT, event.altKey);
-		addModifiers(MODIFIER_KEYS.CONTROL, event.ctrlKey);
-		addModifiers('Meta', event.metaKey);
-		addModifiers(MODIFIER_KEYS.SHIFT, event.shiftKey);
+		addModifiers(MODIFIER_KEYS.ALT);
+		addModifiers(MODIFIER_KEYS.CONTROL);
+		addModifiers('Meta');
+		addModifiers(MODIFIER_KEYS.SHIFT);
 		return game.keybindings.get('tokenwarp', action).some((b) => {
 			if (
 				game.keyboard.downKeys.has(b.key) &&
@@ -963,7 +836,7 @@ function isKeyPressed(ev, key, action = 'teleportKey') {
 			return activeModifiers[b.key];
 		});
 	}
-	return key ? areKeysPressed(ev, action) : false; //return false if no proper key is found.
+	return key ? areKeysPressed(action) : false; //return false if no proper key is found.
 }
 
 function positionOutOfBounds({ destination, origin, tdoc }) {
@@ -998,17 +871,6 @@ function clampDestinationToSceneRect({ destination, tdoc }) {
 	};
 }
 
-const DND5E_MOVEMENT_EXCLUDED_KEYS = new Set([
-	'units',
-	'hover',
-	'ignoredDifficultTerrain',
-	'speed',
-	'max',
-	'slowed',
-	'bonus',
-	'special',
-]);
-
 const MOVEMENT_ACTION_SPEED_ALIASES = Object.freeze({
 	walk: ['walk'],
 	fly: ['fly'],
@@ -1026,6 +888,32 @@ const MOVEMENT_ACTION_SPEED_ALIASES = Object.freeze({
 	crawling: ['crawl', 'walk'],
 	jumping: ['jump', 'walk'],
 });
+
+function getMovementAnimationSpeeds(actor, movementAnimation) {
+	if (movementAnimation?.speeds && typeof movementAnimation.speeds === 'object') {
+		return movementAnimation.speeds;
+	}
+	if (
+		!movementAnimation?.speed ||
+		typeof movementAnimation.speed !== 'object' ||
+		Array.isArray(movementAnimation.speed)
+	) {
+		return {};
+	}
+	migrateMovementAnimationSpeeds(actor, movementAnimation);
+	return movementAnimation.speed;
+}
+
+function migrateMovementAnimationSpeeds(actor, movementAnimation) {
+	if (!actor?.isOwner || MOVEMENT_ANIMATION_FLAG_MIGRATIONS.has(actor)) return;
+	MOVEMENT_ANIMATION_FLAG_MIGRATIONS.add(actor);
+	const next = foundry.utils.duplicate(movementAnimation);
+	next.speeds = foundry.utils.duplicate(movementAnimation.speed);
+	delete next.speed;
+	actor.setFlag('tokenwarp', 'movementAnimation', next).catch((err) => {
+		console.warn(`${name} | Failed to migrate movement animation speeds`, err);
+	});
+}
 
 function clampAnimationSpeed(value, fallback = 6, min = 1, max = 30) {
 	const numeric = Number(value);
@@ -1106,17 +994,6 @@ function getMovementActionFromOptions(movement, options, tdoc) {
 	return null;
 }
 
-function getDnd5eMovementModes(actor) {
-	const movement = actor?.system?.attributes?.movement ?? {};
-	return Object.entries(movement)
-		.filter(([key, value]) => {
-			if (DND5E_MOVEMENT_EXCLUDED_KEYS.has(key)) return false;
-			const numeric = Number(value);
-			return Number.isFinite(numeric) && numeric > 0;
-		})
-		.map(([key, value]) => ({ key, value: Number(value) }));
-}
-
 function getMovementSpeed(movement, options, settings, tdoc, lookupOptions) {
 	const actor = tdoc?.actor;
 	const movementAnimation =
@@ -1134,17 +1011,12 @@ function getMovementSpeed(movement, options, settings, tdoc, lookupOptions) {
 		if (multipleTokensControlled) return null;
 		if (!coerceBoolean(movementAnimation?.override, false)) return null;
 
-		// Support both legacy single-speed and per-mode speed flag shapes.
 		if (Number.isFinite(Number(movementAnimation.speed))) {
 			const speed = Number(movementAnimation.speed);
 			return speed > 0 ? speed : null;
 		}
 
-		const perMode =
-			movementAnimation.speeds ??
-			(typeof movementAnimation.speed === 'object'
-				? movementAnimation.speed
-				: {});
+		const perMode = getMovementAnimationSpeeds(actor, movementAnimation);
 		const speedEntries = Object.entries(perMode)
 			.map(([mode, value]) => [String(mode).toLowerCase(), Number(value)])
 			.filter(([, value]) => Number.isFinite(value) && value > 0);
@@ -1161,17 +1033,13 @@ function getMovementSpeed(movement, options, settings, tdoc, lookupOptions) {
 			}
 		}
 
-		// dnd5e has multiple movement modes, so pick the override for the fastest
-		// mode available on the actor. This keeps faster movement types faster.
-		if (game?.system?.id === 'dnd5e' && actor) {
-			const rankedModes = getDnd5eMovementModes(actor)
-				.filter((entry) => speedByMode.has(entry.key))
-				.sort((a, b) => {
-					if (b.value !== a.value) return b.value - a.value;
-					return speedByMode.get(b.key) - speedByMode.get(a.key);
-				});
-			if (rankedModes.length) return speedByMode.get(rankedModes[0].key);
-		}
+		const rankedModes = getMovementModes(actor)
+			.filter((entry) => speedByMode.has(entry.key))
+			.sort((a, b) => {
+				if (b.value !== a.value) return b.value - a.value;
+				return speedByMode.get(b.key) - speedByMode.get(a.key);
+			});
+		if (rankedModes.length) return speedByMode.get(rankedModes[0].key);
 
 		if (speedByMode.has('walk')) return speedByMode.get('walk');
 		return Math.max(...speedEntries.map(([, value]) => value));
@@ -1285,14 +1153,166 @@ function resetTriggerPresetValues({ presetId, triggerInputs }) {
 	return true;
 }
 
+const ACTIVE_TOKEN_DIALOG_SELECTOR = '.application.dialog.tokenwarp-token-dialog';
+
+async function prepareActiveTokenSelectionData(tokens) {
+	const preparedTokens = [];
+	for (const token of tokens) {
+		let img = token.texture?.src ?? token.actor?.img ?? '';
+		if (foundry.helpers.media.VideoHelper.hasVideoExtension(img)) {
+			img = (await game.video?.createThumbnail(img, { width: 50, height: 50 })) ?? '';
+		}
+		preparedTokens.push({
+			id: token.id,
+			name: String(token.name ?? token.id),
+			img,
+		});
+	}
+	return preparedTokens;
+}
+
+function restoreControlledTokens(tokenIds) {
+	const ids = new Set(tokenIds);
+	for (const token of canvas.tokens.controlled) {
+		if (!ids.has(token.id)) token.release({ renderSidebar: false });
+	}
+	let releaseOthers = !ids.size;
+	for (const id of ids) {
+		const token = canvas.tokens.get(id);
+		if (!token) continue;
+		token.control({ releaseOthers, renderSidebar: false });
+		releaseOthers = false;
+	}
+}
+
+function controlTokenDocument(tokenDocument, releaseOthers = true) {
+	const token = canvas?.tokens?.get(tokenDocument?.id);
+	token?.control({ releaseOthers, renderSidebar: false });
+}
+
+function decorateActiveTokenDialog(dialogEl, preparedTokens, priorControlled) {
+	if (!dialogEl || dialogEl.dataset.tokenwarpDecorated === 'true') return false;
+	dialogEl.dataset.tokenwarpDecorated = 'true';
+
+	dialogEl.addEventListener('pointerover', (ev) => {
+		const btn = ev.target.closest('button');
+		if (!btn || !dialogEl.contains(btn)) return;
+		const id = btn.getAttribute('data-action');
+		canvas.tokens.get(id)?.control({ releaseOthers: true, renderSidebar: false });
+	});
+
+	dialogEl.addEventListener('pointerout', (ev) => {
+		const btn = ev.target.closest('button');
+		if (!btn || !dialogEl.contains(btn)) return;
+		restoreControlledTokens(priorControlled);
+	});
+
+	dialogEl.addEventListener(
+		'close',
+		() => restoreControlledTokens(priorControlled),
+		{ once: true },
+	);
+
+	for (const token of preparedTokens) {
+		const btn = dialogEl.querySelector(`button[data-action="${token.id}"]`);
+		if (!btn || btn.dataset.tokenwarpDecorated === 'true') continue;
+		btn.dataset.tokenwarpDecorated = 'true';
+		btn.style.display = 'flex';
+		btn.style.alignItems = 'center';
+		btn.style.gap = '0.5rem';
+		btn.style.textAlign = 'left';
+		const img = document.createElement('img');
+		img.src = token.img;
+		img.alt = '';
+		img.style.width = '50px';
+		img.style.height = '50px';
+		img.style.objectFit = 'cover';
+		img.style.flex = '0 0 50px';
+		img.style.borderRadius = '4px';
+		btn.prepend(img);
+	}
+	return true;
+}
+
+function scheduleActiveTokenDialogDecoration(
+	preparedTokens,
+	priorControlled,
+	attempts = 8,
+) {
+	let remaining = attempts;
+	const tryDecorate = () => {
+		const dialogs = document.querySelectorAll(ACTIVE_TOKEN_DIALOG_SELECTOR);
+		const dialogEl = dialogs[dialogs.length - 1] ?? null;
+		if (decorateActiveTokenDialog(dialogEl, preparedTokens, priorControlled)) return;
+		remaining -= 1;
+		if (remaining > 0) requestAnimationFrame(tryDecorate);
+	};
+	requestAnimationFrame(tryDecorate);
+}
+
+async function minimizeRenderedApps(apps) {
+	const minimized = [];
+	for (const app of apps) {
+		if (!app?.rendered || app.minimized) continue;
+		if (typeof app.minimize !== 'function') continue;
+		await app.minimize();
+		minimized.push(app);
+	}
+	return minimized;
+}
+
+async function maximizeRenderedApps(apps) {
+	for (const app of apps.reverse()) {
+		if (typeof app?.maximize === 'function') await app.maximize();
+	}
+}
+
+async function chooseActiveTokenDocument(actor, apps = []) {
+	const tokens =
+		actor
+			?.getActiveTokens?.(true, true)
+			?.filter((token) => token?.id) ?? [];
+	if (tokens.length === 1) return tokens[0];
+	if (!tokens.length) return null;
+
+	const preparedTokens = await prepareActiveTokenSelectionData(tokens);
+	const priorControlled = canvas.tokens.controlled.map((token) => token.id);
+	const minimizedApps = await minimizeRenderedApps(apps);
+	try {
+		const selectionPromise = foundry.applications.api.DialogV2.wait({
+			window: { title: `${name} ${game.i18n.localize('TOKENWARP.Menu')}` },
+			content: `<p>${game.i18n.localize('TOKENWARP.ActiveTokenHint')}</p>`,
+			modal: false,
+			buttons: preparedTokens.map((token) => ({
+				label: token.name,
+				action: token.id,
+			})),
+			classes: ['tokenwarp-token-dialog'],
+		});
+		scheduleActiveTokenDialogDecoration(preparedTokens, priorControlled);
+		const tokenId = await selectionPromise;
+		restoreControlledTokens(priorControlled);
+		const tokenDocument = tokens.find((token) => token.id === tokenId) ?? null;
+		controlTokenDocument(tokenDocument);
+		return tokenDocument;
+	} finally {
+		await maximizeRenderedApps(minimizedApps);
+	}
+}
+
 async function _renderDialog() {
 	const tokenRef = this.token; // Token placeable or TokenDocument
-	const rawTokenDocument = tokenRef?.document ?? tokenRef ?? null;
+	let rawTokenDocument = tokenRef?.document ?? tokenRef ?? null;
 	const actor = rawTokenDocument?.actor || tokenRef?.actor || this.actor;
 	if (!actor) return;
+	const priorControlled = canvas?.tokens?.controlled?.map((token) => token.id) ?? [];
+	if (!rawTokenDocument) {
+		const apps = [this.app, ...Object.values(actor.apps ?? {})];
+		rawTokenDocument = await chooseActiveTokenDocument(actor, apps);
+	}
 	const tokenDocument = rawTokenDocument ?? null;
+	controlTokenDocument(tokenDocument);
 
-	const isDnd5e = game?.system?.id === 'dnd5e';
 	const hasHpZeroSupport = actorHasHpRollData(actor);
 	const twTriggers = actor.getFlag('tokenwarp', 'tokenTriggers') || {};
 	const savedAnimation = actor.getFlag('tokenwarp', 'movementAnimation') || {};
@@ -1307,6 +1327,10 @@ async function _renderDialog() {
 
 	const titleCase = (value) =>
 		value?.length ? `${value[0].toUpperCase()}${value.slice(1)}` : value;
+	const movementModeLabel = (key, label) =>
+		label && game.i18n.has(label)
+			? game.i18n.localize(label)
+			: (label ?? titleCase(key));
 
 	let triggersContent = '';
 	for (let index = 0; index < triggers.length; index++) {
@@ -1351,19 +1375,16 @@ async function _renderDialog() {
       </div>
     `;
 
-	let movementModeEntries = [];
+	let movementModeEntries = getMovementModes(actor).sort((a, b) => {
+		if (b.value !== a.value) return b.value - a.value;
+		return a.key.localeCompare(b.key);
+	});
+	const hasMovementModes = movementModeEntries.length > 0;
 	let slidersHTML = '';
 	let animationResetSpeed = clampAnimationSpeed(worldDefaultSpeed, 6);
 	const animationResetSpeedsByMode = {};
-	if (isDnd5e) {
-		const savedSpeeds =
-			savedAnimation.speeds ??
-			(typeof savedAnimation.speed === 'object' ? savedAnimation.speed : {});
-
-		movementModeEntries = getDnd5eMovementModes(actor).sort((a, b) => {
-			if (b.value !== a.value) return b.value - a.value;
-			return a.key.localeCompare(b.key);
-		});
+	if (hasMovementModes) {
+		const savedSpeeds = getMovementAnimationSpeeds(actor, savedAnimation);
 
 		const walkSpeed = movementModeEntries.find(
 			(entry) => entry.key === 'walk',
@@ -1376,7 +1397,7 @@ async function _renderDialog() {
 			slidersHTML =
 				'<p class="notes">No non-zero movement types found on this actor.</p>';
 		} else {
-			for (const { key, value } of movementModeEntries) {
+			for (const { key, label, value } of movementModeEntries) {
 				const ratio = baseline > 0 ? value / baseline : 1;
 				const initialScaled = clampAnimationSpeed(
 					baseSettingSpeed * ratio,
@@ -1388,7 +1409,7 @@ async function _renderDialog() {
 					initialScaled,
 				);
 				const speedField = new foundry.data.fields.NumberField({
-					label: `${titleCase(key)} (${value})`,
+					label: `${movementModeLabel(key, label)} (${value})`,
 					min: 1,
 					max: 30,
 					step: 1,
@@ -1449,7 +1470,7 @@ async function _renderDialog() {
 
 	const movementLeaderContent = (() => {
 		if (!tokenDocument?.id) {
-			return `<p class="notes">${game.i18n.localize('TOKENWARP.LeaderNoTokenHint')}</p>`;
+			return '';
 		}
 		const selectedRole = savedLeaderState.role;
 		const selectedFollowTokenId = savedLeaderState.followTokenId;
@@ -1552,7 +1573,7 @@ async function _renderDialog() {
 		let submitted = false;
 		const dialog = new foundry.applications.api.DialogV2({
 			content,
-			window: { title: `${name} Triggers` },
+			window: { title: `${name} ${game.i18n.localize('TOKENWARP.Menu')}` },
 			position: { width: 460 },
 			form: { closeOnSubmit: false },
 			buttons,
@@ -1704,7 +1725,7 @@ async function _renderDialog() {
 					});
 
 				const resetAnimationScope = () => {
-					if (isDnd5e) {
+					if (hasMovementModes) {
 						let changed = false;
 						const sliderRows = slidersWrap
 							? Array.from(
@@ -1721,8 +1742,7 @@ async function _renderDialog() {
 									animationResetSpeedsByMode[key] ?? baseSettingSpeed,
 								);
 								let changedForMode =
-									setNamedInputValue(`movementAnimation.speeds.${key}`, speed) ||
-									setNamedInputValue(`movementAnimation.speed.${key}`, speed);
+									setNamedInputValue(`movementAnimation.speeds.${key}`, speed);
 								if (!changedForMode) {
 									const inputs = Array.from(
 										row.querySelectorAll(
@@ -1744,7 +1764,6 @@ async function _renderDialog() {
 						)) {
 							changed =
 								setNamedInputValue(`movementAnimation.speeds.${key}`, speed) ||
-								setNamedInputValue(`movementAnimation.speed.${key}`, speed) ||
 								changed;
 						}
 						return changed;
@@ -1800,6 +1819,7 @@ async function _renderDialog() {
 		dialog.addEventListener(
 			'close',
 			() => {
+				restoreControlledTokens(priorControlled);
 				if (!submitted) resolve(null);
 			},
 			{ once: true },
@@ -1819,11 +1839,9 @@ async function _renderDialog() {
 
 	const movementAnimation = movementAnimationChoices ?? {};
 	const override = coerceBoolean(movementAnimation.override, false);
-	if (isDnd5e) {
+	if (hasMovementModes) {
 		const speedsIn = movementAnimation.speeds ?? {};
-		const savedSpeeds =
-			savedAnimation.speeds ??
-			(typeof savedAnimation.speed === 'object' ? savedAnimation.speed : {});
+		const savedSpeeds = getMovementAnimationSpeeds(actor, savedAnimation);
 		const speedsOut = {};
 		for (const { key } of movementModeEntries) {
 			speedsOut[key] = clampAnimationSpeed(
@@ -1853,7 +1871,7 @@ async function _renderDialog() {
 
 function _onDrop(ev, context = {}) {
 	ev.preventDefault();
-	const data = foundry.applications.ux.TextEditor.getDragEventData(ev);
+	const data = foundry.applications.ux.TextEditor.implementation.getDragEventData(ev);
 	const target = ev.target;
 	const uuid = data.uuid ?? '';
 	target.value = uuid;
@@ -1876,9 +1894,7 @@ function _onDrop(ev, context = {}) {
 }
 
 function warnCompatibility(message, options = {}) {
-	const logger =
-		foundry?.utils?.logCompatibilityWarning ??
-		globalThis.logCompatibilityWarning;
+	const logger = foundry?.utils?.logCompatibilityWarning;
 	if (typeof logger === 'function') {
 		logger(message, options);
 		return;
@@ -1896,9 +1912,8 @@ function defineLegacyHookArgAlias(
 		hookName,
 		legacyKey,
 		canonicalKey,
-		since = '13.0',
-		until = '14',
-		details = '',
+		since = 14,
+		until = 15,
 	},
 ) {
 	if (!payload || Object.hasOwn(payload, legacyKey)) return;
@@ -1911,7 +1926,7 @@ function defineLegacyHookArgAlias(
 				LEGACY_HOOK_ARG_WARNINGS.add(warningKey);
 				warnCompatibility(
 					`${name}: "${hookName}" macro arg "${legacyKey}" is deprecated, use "${canonicalKey}" instead.`,
-					{ since, until, details, once: true },
+					{ since, until, once: true },
 				);
 			}
 			return payload[canonicalKey];
@@ -1921,7 +1936,7 @@ function defineLegacyHookArgAlias(
 				LEGACY_HOOK_ARG_WARNINGS.add(warningKey);
 				warnCompatibility(
 					`${name}: "${hookName}" macro arg "${legacyKey}" is deprecated, use "${canonicalKey}" instead.`,
-					{ since, until, details, once: true },
+					{ since, until, once: true },
 				);
 			}
 			payload[canonicalKey] = value;
@@ -1929,9 +1944,26 @@ function defineLegacyHookArgAlias(
 	});
 }
 
+function addLegacyMacroAliases(payload, hookName, dataKey = 'data') {
+	defineLegacyHookArgAlias(payload, {
+		hookName,
+		legacyKey: 'context',
+		canonicalKey: 'options',
+	});
+	if (dataKey) {
+		defineLegacyHookArgAlias(payload, {
+			hookName,
+			legacyKey: 'changes',
+			canonicalKey: dataKey,
+		});
+	}
+	return payload;
+}
+
 function getMacroUserFields(userOrUserId) {
 	if (typeof userOrUserId === 'string') {
-		return { userId: userOrUserId, user: userOrUserId };
+		const user = game.users.get(userOrUserId);
+		return user ? { userId: userOrUserId, user } : { userId: userOrUserId };
 	}
 
 	if (userOrUserId === undefined || userOrUserId === null) return {};
@@ -1957,15 +1989,7 @@ function createTokenLifecycleMacroPayload({
 		...getMacroUserFields(userId),
 	};
 	if (data !== undefined) payload.data = data;
-
-	defineLegacyHookArgAlias(payload, {
-		hookName,
-		legacyKey: 'context',
-		canonicalKey: 'options',
-		details: 'The options object is now exposed as "options".',
-	});
-
-	return payload;
+	return addLegacyMacroAliases(payload, hookName, data === undefined ? null : 'data');
 }
 
 export async function _executePreCreation(
@@ -1974,8 +1998,10 @@ export async function _executePreCreation(
 	options,
 	userId,
 ) {
+	const actor = tokenDocument?.actor;
+	if (!actor) return;
 	const tag = kebabTriggers[1];
-	const hasTrigger = tokenDocument.actor.getFlag(
+	const hasTrigger = actor.getFlag(
 		'tokenwarp',
 		`tokenTriggers.${tag}`,
 	);
@@ -1995,8 +2021,10 @@ export async function _executePreCreation(
 }
 export async function _executePostCreation(tokenDocument, options, userId) {
 	if (game.user.id !== userId) return;
+	const actor = tokenDocument?.actor;
+	if (!actor) return;
 	const tag = kebabTriggers[2];
-	const hasTrigger = tokenDocument.actor.getFlag(
+	const hasTrigger = actor.getFlag(
 		'tokenwarp',
 		`tokenTriggers.${tag}`,
 	);
@@ -2015,8 +2043,10 @@ export async function _executePostCreation(tokenDocument, options, userId) {
 }
 
 export async function _executePreDeletion(tokenDocument, options, userId) {
+	const actor = tokenDocument?.actor;
+	if (!actor) return;
 	const tag = kebabTriggers[3];
-	const hasTrigger = tokenDocument.actor.getFlag(
+	const hasTrigger = actor.getFlag(
 		'tokenwarp',
 		`tokenTriggers.${tag}`,
 	);
@@ -2036,8 +2066,10 @@ export async function _executePreDeletion(tokenDocument, options, userId) {
 
 export async function _executePostDeletion(tokenDocument, options, userId) {
 	if (game.user.id !== userId) return;
+	const actor = tokenDocument?.actor;
+	if (!actor) return;
 	const tag = kebabTriggers[4];
-	const hasTrigger = tokenDocument.actor.getFlag(
+	const hasTrigger = actor.getFlag(
 		'tokenwarp',
 		`tokenTriggers.${tag}`,
 	);
@@ -2061,23 +2093,23 @@ export async function _executePreUpdateToken(
 	options,
 	userId,
 ) {
+	const actor = tokenDocument?.actor;
+	if (!actor) return;
 	const tag = kebabTriggers[5];
-	const hasTrigger = tokenDocument.actor.getFlag(
+	const hasTrigger = actor.getFlag(
 		'tokenwarp',
 		`tokenTriggers.${tag}`,
 	);
 	if (hasTrigger) {
 		const macro = await fromUuid(hasTrigger);
-		return macro.execute({
+		return macro.execute(addLegacyMacroAliases({
 			token: tokenDocument,
-			actor: tokenDocument.actor,
+			actor,
 			data,
-			changes: data,
 			options,
-			context: options,
 			tag,
 			...getMacroUserFields(userId),
-		});
+		}, 'preUpdateToken'));
 	}
 }
 
@@ -2088,23 +2120,23 @@ export async function _executePostUpdateToken(
 	userId,
 ) {
 	if (game.user.id !== userId) return;
+	const actor = tokenDocument?.actor;
+	if (!actor) return;
 	const tag = kebabTriggers[6];
-	const hasTrigger = tokenDocument.actor.getFlag(
+	const hasTrigger = actor.getFlag(
 		'tokenwarp',
 		`tokenTriggers.${tag}`,
 	);
 	if (hasTrigger) {
 		const macro = await fromUuid(hasTrigger);
-		return macro.execute({
+		return macro.execute(addLegacyMacroAliases({
 			token: tokenDocument,
-			actor: tokenDocument.actor,
+			actor,
 			data,
-			changes: data,
 			options,
-			context: options,
 			tag,
 			...getMacroUserFields(userId),
-		});
+		}, 'updateToken'));
 	}
 }
 export async function _registerMovementHooks(
@@ -2148,6 +2180,7 @@ export async function _registerMovementHooks(
 function getMovementUserId(movement, context, user) {
 	return (
 		(typeof user === 'string' && user) ||
+		(typeof user?.id === 'string' && user.id) ||
 		(typeof context?.userId === 'string' && context.userId) ||
 		(typeof context?.user === 'string' && context.user) ||
 		(typeof movement?.passed?.waypoints?.[0]?.userId === 'string' &&
@@ -2165,23 +2198,23 @@ export async function _executeTokenMovementStart(
 	options,
 	userId,
 ) {
+	const actor = tokenDocument?.actor;
+	if (!actor) return;
 	const tag = kebabTriggers[7];
-	const hasTrigger = tokenDocument.actor.getFlag(
+	const hasTrigger = actor.getFlag(
 		'tokenwarp',
 		`tokenTriggers.${tag}`,
 	);
 	if (hasTrigger) {
 		const macro = await fromUuid(hasTrigger);
-		return macro.execute({
+		return macro.execute(addLegacyMacroAliases({
 			token: tokenDocument,
-			actor: tokenDocument.actor,
+			actor,
 			move,
-			changes: move,
 			options,
-			context: options,
 			tag,
 			...getMacroUserFields(userId),
-		});
+		}, 'tokenwarp.movementStart', 'move'));
 	}
 }
 
@@ -2191,33 +2224,24 @@ export async function _executeTokenMovementStop(
 	options,
 	userId,
 ) {
+	const actor = tokenDocument?.actor;
+	if (!actor) return;
 	const tag = kebabTriggers[8];
-	const hasTrigger = tokenDocument.actor.getFlag(
+	const hasTrigger = actor.getFlag(
 		'tokenwarp',
 		`tokenTriggers.${tag}`,
 	);
 	if (hasTrigger) {
 		const macro = await fromUuid(hasTrigger);
-		return macro.execute({
+		return macro.execute(addLegacyMacroAliases({
 			token: tokenDocument,
-			actor: tokenDocument.actor,
+			actor,
 			move,
-			changes: move,
 			options,
-			context: options,
 			tag,
 			...getMacroUserFields(userId),
-		});
+		}, 'tokenwarp.movementStop', 'move'));
 	}
-}
-
-function isHpZeroUpdate(actorDocument, changes) {
-	if (!actorHasHpRollData(actorDocument)) return false;
-	if (!foundry.utils.hasProperty(changes ?? {}, 'system.attributes.hp.value')) {
-		return false;
-	}
-	const hpValue = Number(changes?.system?.attributes?.hp?.value);
-	return Number.isFinite(hpValue) && hpValue <= 0;
 }
 
 export async function _executePreUpdateActor(
@@ -2231,15 +2255,13 @@ export async function _executePreUpdateActor(
 	let result;
 	if (hasTrigger) {
 		const macro = await fromUuid(hasTrigger);
-		result = await macro.execute({
+		result = await macro.execute(addLegacyMacroAliases({
 			actor: actorDocument,
 			data,
-			changes: data,
 			options,
-			context: options,
 			tag,
 			...getMacroUserFields(userId),
-		});
+		}, 'preUpdateActor'));
 	}
 	if (isHpZeroUpdate(actorDocument, data)) {
 		Hooks.callAll(
@@ -2265,15 +2287,13 @@ export async function _executePostUpdateActor(
 	const hasTrigger = actorDocument.getFlag('tokenwarp', `tokenTriggers.${tag}`);
 	if (hasTrigger) {
 		const macro = await fromUuid(hasTrigger);
-		await macro.execute({
+		await macro.execute(addLegacyMacroAliases({
 			actor: actorDocument,
 			data,
-			changes: data,
 			options,
-			context: options,
 			tag,
 			...getMacroUserFields(userId),
-		});
+		}, 'updateActor'));
 	}
 	if (isHpZeroUpdate(actorDocument, data)) {
 		Hooks.callAll(
@@ -2302,15 +2322,13 @@ export async function _executePreActorHpZero(
 	);
 	if (hasTrigger) {
 		const macro = await fromUuid(hasTrigger);
-		return macro.execute({
+		return macro.execute(addLegacyMacroAliases({
 			actor: actorDocument,
 			data,
-			changes: data,
 			options,
-			context: options,
 			tag: hookTag,
 			...getMacroUserFields(userId),
-		});
+		}, 'tokenwarp.preActorHpZero'));
 	}
 }
 
@@ -2330,22 +2348,24 @@ export async function _executePostActorHpZero(
 	);
 	if (hasTrigger) {
 		const macro = await fromUuid(hasTrigger);
-		return macro.execute({
+		return macro.execute(addLegacyMacroAliases({
 			actor: actorDocument,
 			data,
-			changes: data,
 			options,
-			context: options,
 			tag: hookTag,
 			...getMacroUserFields(userId),
-		});
+		}, 'tokenwarp.actorHpZero'));
 	}
 }
 
 export function _addActorSheetHeaderButton(app, controls) {
 	controls.push({
-		label: `${name} ${game.i18n.localize('TOKENWARP.Triggers')}`,
+		label: `${name} ${game.i18n.localize('TOKENWARP.Menu')}`,
 		icon: 'fas fa-shuffle',
-		onClick: _renderDialog.bind({ actor: app.document, token: app.token }),
+		onClick: _renderDialog.bind({
+			actor: app.document,
+			token: app.token,
+			app,
+		}),
 	});
 }
