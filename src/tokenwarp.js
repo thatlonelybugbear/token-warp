@@ -95,7 +95,8 @@ export function _preUpdateToken(tdoc, changes, options, userId) {
 			changes,
 			options,
 		);
-		if (syntheticMove) routeFollowersFromSyntheticMove(tdoc, syntheticMove, options);
+		if (syntheticMove)
+			routeFollowersFromSyntheticMove(tdoc, syntheticMove, options);
 	}
 
 	const {
@@ -274,19 +275,23 @@ function getLeaderFlagState(tokenDocument) {
 	}
 	if (!rawFlag || typeof rawFlag !== 'object') return state;
 
-	const followFromObject = [rawFlag.follow, rawFlag.leaderId, rawFlag.tokenId].find(
-		(value) => typeof value === 'string' && value.trim().length > 0,
-	);
+	const followFromObject = [
+		rawFlag.follow,
+		rawFlag.leaderId,
+		rawFlag.tokenId,
+	].find((value) => typeof value === 'string' && value.trim().length > 0);
 	if (followFromObject) state.follows = followFromObject.trim();
 	if (coerceBoolean(rawFlag.isLeader, false)) state.isLeader = true;
-	if (coerceBoolean(rawFlag.leader, false) && !state.follows) state.isLeader = true;
+	if (coerceBoolean(rawFlag.leader, false) && !state.follows)
+		state.isLeader = true;
 	return state;
 }
 
 function getMovementLeaderDialogState(tokenDocument) {
 	const state = getLeaderFlagState(tokenDocument);
 	if (state.isLeader) return { role: 'leader', followTokenId: '' };
-	if (state.follows) return { role: 'follower', followTokenId: String(state.follows) };
+	if (state.follows)
+		return { role: 'follower', followTokenId: String(state.follows) };
 	return { role: 'none', followTokenId: '' };
 }
 
@@ -348,9 +353,13 @@ function getTokenDocumentMovementWaypoint(tokenDocument, action) {
 			tokenDocument?._source?.elevation ?? tokenDocument?.elevation ?? 0,
 		),
 		width: Number(tokenDocument?._source?.width ?? tokenDocument?.width ?? 1),
-		height: Number(tokenDocument?._source?.height ?? tokenDocument?.height ?? 1),
+		height: Number(
+			tokenDocument?._source?.height ?? tokenDocument?.height ?? 1,
+		),
 		shape: tokenDocument?._source?.shape ?? tokenDocument?.shape,
-		action: normalizeMovementAction(action ?? tokenDocument?.movementAction) ?? 'walk',
+		action:
+			normalizeMovementAction(action ?? tokenDocument?.movementAction) ??
+			'walk',
 		snapped: true,
 		explicit: true,
 		checkpoint: true,
@@ -359,7 +368,9 @@ function getTokenDocumentMovementWaypoint(tokenDocument, action) {
 
 function getTokenGridFootprint(tokenDocument) {
 	const width = Number(tokenDocument?.width ?? tokenDocument?._source?.width);
-	const height = Number(tokenDocument?.height ?? tokenDocument?._source?.height);
+	const height = Number(
+		tokenDocument?.height ?? tokenDocument?._source?.height,
+	);
 	const footprint = Math.max(
 		1,
 		Math.ceil(Number.isFinite(width) ? width : 1),
@@ -400,13 +411,14 @@ function movementWaypointsEqual(a, b) {
 
 function getLeaderPathWaypoints(tokenDocument, move, options) {
 	const moveWaypoints = [];
-	if (Array.isArray(move?.passed?.waypoints)) moveWaypoints.push(...move.passed.waypoints);
+	if (Array.isArray(move?.passed?.waypoints))
+		moveWaypoints.push(...move.passed.waypoints);
 	if (Array.isArray(move?.pending?.waypoints))
 		moveWaypoints.push(...move.pending.waypoints);
 
 	let sourceWaypoints = moveWaypoints.length
 		? moveWaypoints
-		: options?.movement?.[tokenDocument?.id]?.waypoints ?? [];
+		: (options?.movement?.[tokenDocument?.id]?.waypoints ?? []);
 	if (
 		!moveWaypoints.length &&
 		Array.isArray(sourceWaypoints) &&
@@ -459,7 +471,8 @@ function getFollowerDocuments(leaderTokenDocument, move) {
 		: getTokenDocumentPosition(leaderTokenDocument);
 
 	const followers = [];
-	const leaderCandidateIds = getTokenDocumentLeaderCandidateIds(leaderTokenDocument);
+	const leaderCandidateIds =
+		getTokenDocumentLeaderCandidateIds(leaderTokenDocument);
 	for (const token of controlledTokens) {
 		const followerDocument = token?.document;
 		if (!followerDocument || followerDocument.id === leaderTokenDocument?.id) {
@@ -597,8 +610,13 @@ function buildSyntheticMoveFromPositionUpdate(tokenDocument, changes, options) {
 	};
 }
 
-function routeFollowersFromSyntheticMove(tokenDocument, syntheticMove, options) {
-	if (!tokenDocument || !syntheticMove || typeof options !== 'object') return false;
+function routeFollowersFromSyntheticMove(
+	tokenDocument,
+	syntheticMove,
+	options,
+) {
+	if (!tokenDocument || !syntheticMove || typeof options !== 'object')
+		return false;
 
 	const leaderTokenDocument = getActiveLeaderTokenDocument(
 		tokenDocument,
@@ -676,7 +694,8 @@ function routeFollowersBehindLeader(tokenDocument, move, options) {
 
 	let trailingOffset = 0;
 	let previousFootprint = getTokenGridFootprint(leaderTokenDocument);
-	const leaderCandidateIds = getTokenDocumentLeaderCandidateIds(leaderTokenDocument);
+	const leaderCandidateIds =
+		getTokenDocumentLeaderCandidateIds(leaderTokenDocument);
 	for (const followerDocument of followers) {
 		if (leaderCandidateIds.has(String(followerDocument.id))) continue;
 		const followerFootprint = getTokenGridFootprint(followerDocument);
@@ -890,7 +909,10 @@ const MOVEMENT_ACTION_SPEED_ALIASES = Object.freeze({
 });
 
 function getMovementAnimationSpeeds(actor, movementAnimation) {
-	if (movementAnimation?.speeds && typeof movementAnimation.speeds === 'object') {
+	if (
+		movementAnimation?.speeds &&
+		typeof movementAnimation.speeds === 'object'
+	) {
 		return movementAnimation.speeds;
 	}
 	if (
@@ -1153,14 +1175,17 @@ function resetTriggerPresetValues({ presetId, triggerInputs }) {
 	return true;
 }
 
-const ACTIVE_TOKEN_DIALOG_SELECTOR = '.application.dialog.tokenwarp-token-dialog';
+const ACTIVE_TOKEN_DIALOG_SELECTOR =
+	'.application.dialog.tokenwarp-token-dialog';
 
 async function prepareActiveTokenSelectionData(tokens) {
 	const preparedTokens = [];
 	for (const token of tokens) {
 		let img = token.texture?.src ?? token.actor?.img ?? '';
 		if (foundry.helpers.media.VideoHelper.hasVideoExtension(img)) {
-			img = (await game.video?.createThumbnail(img, { width: 50, height: 50 })) ?? '';
+			img =
+				(await game.video?.createThumbnail(img, { width: 50, height: 50 })) ??
+				'';
 		}
 		preparedTokens.push({
 			id: token.id,
@@ -1173,6 +1198,7 @@ async function prepareActiveTokenSelectionData(tokens) {
 
 function restoreControlledTokens(tokenIds) {
 	const ids = new Set(tokenIds);
+	let firstRestored = null;
 	for (const token of canvas.tokens.controlled) {
 		if (!ids.has(token.id)) token.release({ renderSidebar: false });
 	}
@@ -1181,8 +1207,15 @@ function restoreControlledTokens(tokenIds) {
 		const token = canvas.tokens.get(id);
 		if (!token) continue;
 		token.control({ releaseOthers, renderSidebar: false });
+		firstRestored ??= token;
 		releaseOthers = false;
 	}
+	return firstRestored;
+}
+
+function restoreControlledTokensAndPan(tokenIds) {
+	const token = restoreControlledTokens(tokenIds);
+	token?.panCanvas?.({ duration: 200 });
 }
 
 function controlTokenDocument(tokenDocument, releaseOthers = true) {
@@ -1198,18 +1231,24 @@ function decorateActiveTokenDialog(dialogEl, preparedTokens, priorControlled) {
 		const btn = ev.target.closest('button');
 		if (!btn || !dialogEl.contains(btn)) return;
 		const id = btn.getAttribute('data-action');
-		canvas.tokens.get(id)?.control({ releaseOthers: true, renderSidebar: false });
+		if (dialogEl.dataset.tokenwarpHoveredToken === id) return;
+		dialogEl.dataset.tokenwarpHoveredToken = id;
+		const token = canvas.tokens.get(id);
+		token?.control({ releaseOthers: true, renderSidebar: false });
+		token?.panCanvas?.({ duration: 200 });
 	});
 
 	dialogEl.addEventListener('pointerout', (ev) => {
 		const btn = ev.target.closest('button');
 		if (!btn || !dialogEl.contains(btn)) return;
-		restoreControlledTokens(priorControlled);
+		if (ev.relatedTarget && btn.contains(ev.relatedTarget)) return;
+		delete dialogEl.dataset.tokenwarpHoveredToken;
+		restoreControlledTokensAndPan(priorControlled);
 	});
 
 	dialogEl.addEventListener(
 		'close',
-		() => restoreControlledTokens(priorControlled),
+		() => restoreControlledTokensAndPan(priorControlled),
 		{ once: true },
 	);
 
@@ -1243,7 +1282,8 @@ function scheduleActiveTokenDialogDecoration(
 	const tryDecorate = () => {
 		const dialogs = document.querySelectorAll(ACTIVE_TOKEN_DIALOG_SELECTOR);
 		const dialogEl = dialogs[dialogs.length - 1] ?? null;
-		if (decorateActiveTokenDialog(dialogEl, preparedTokens, priorControlled)) return;
+		if (decorateActiveTokenDialog(dialogEl, preparedTokens, priorControlled))
+			return;
 		remaining -= 1;
 		if (remaining > 0) requestAnimationFrame(tryDecorate);
 	};
@@ -1269,9 +1309,7 @@ async function maximizeRenderedApps(apps) {
 
 async function chooseActiveTokenDocument(actor, apps = []) {
 	const tokens =
-		actor
-			?.getActiveTokens?.(true, true)
-			?.filter((token) => token?.id) ?? [];
+		actor?.getActiveTokens?.(true, true)?.filter((token) => token?.id) ?? [];
 	if (tokens.length === 1) return tokens[0];
 	if (!tokens.length) return null;
 
@@ -1305,7 +1343,8 @@ async function _renderDialog() {
 	let rawTokenDocument = tokenRef?.document ?? tokenRef ?? null;
 	const actor = rawTokenDocument?.actor || tokenRef?.actor || this.actor;
 	if (!actor) return;
-	const priorControlled = canvas?.tokens?.controlled?.map((token) => token.id) ?? [];
+	const priorControlled =
+		canvas?.tokens?.controlled?.map((token) => token.id) ?? [];
 	if (!rawTokenDocument) {
 		const apps = [this.app, ...Object.values(actor.apps ?? {})];
 		rawTokenDocument = await chooseActiveTokenDocument(actor, apps);
@@ -1678,7 +1717,9 @@ async function _renderDialog() {
 				const leaderRoleInput = dialog.element.querySelector(
 					"select[name='movementLeader.role']",
 				);
-				const followerRow = dialog.element.querySelector('[data-tw-follow-row]');
+				const followerRow = dialog.element.querySelector(
+					'[data-tw-follow-row]',
+				);
 				const applyLeaderRoleUI = () => {
 					if (!(followerRow instanceof HTMLElement)) return;
 					const isFollower = leaderRoleInput?.value === 'follower';
@@ -1741,8 +1782,10 @@ async function _renderDialog() {
 									row.dataset.twResetSpeed,
 									animationResetSpeedsByMode[key] ?? baseSettingSpeed,
 								);
-								let changedForMode =
-									setNamedInputValue(`movementAnimation.speeds.${key}`, speed);
+								let changedForMode = setNamedInputValue(
+									`movementAnimation.speeds.${key}`,
+									speed,
+								);
 								if (!changedForMode) {
 									const inputs = Array.from(
 										row.querySelectorAll(
@@ -1871,7 +1914,8 @@ async function _renderDialog() {
 
 function _onDrop(ev, context = {}) {
 	ev.preventDefault();
-	const data = foundry.applications.ux.TextEditor.implementation.getDragEventData(ev);
+	const data =
+		foundry.applications.ux.TextEditor.implementation.getDragEventData(ev);
 	const target = ev.target;
 	const uuid = data.uuid ?? '';
 	target.value = uuid;
@@ -1908,13 +1952,7 @@ function warnCompatibility(message, options = {}) {
 
 function defineLegacyHookArgAlias(
 	payload,
-	{
-		hookName,
-		legacyKey,
-		canonicalKey,
-		since = 14,
-		until = 15,
-	},
+	{ hookName, legacyKey, canonicalKey, since = 14, until = 15 },
 ) {
 	if (!payload || Object.hasOwn(payload, legacyKey)) return;
 	const warningKey = `${hookName}.${legacyKey}`;
@@ -1989,7 +2027,11 @@ function createTokenLifecycleMacroPayload({
 		...getMacroUserFields(userId),
 	};
 	if (data !== undefined) payload.data = data;
-	return addLegacyMacroAliases(payload, hookName, data === undefined ? null : 'data');
+	return addLegacyMacroAliases(
+		payload,
+		hookName,
+		data === undefined ? null : 'data',
+	);
 }
 
 export async function _executePreCreation(
@@ -2001,10 +2043,7 @@ export async function _executePreCreation(
 	const actor = tokenDocument?.actor;
 	if (!actor) return;
 	const tag = kebabTriggers[1];
-	const hasTrigger = actor.getFlag(
-		'tokenwarp',
-		`tokenTriggers.${tag}`,
-	);
+	const hasTrigger = actor.getFlag('tokenwarp', `tokenTriggers.${tag}`);
 	if (hasTrigger) {
 		const macro = await fromUuid(hasTrigger);
 		return macro.execute(
@@ -2024,10 +2063,7 @@ export async function _executePostCreation(tokenDocument, options, userId) {
 	const actor = tokenDocument?.actor;
 	if (!actor) return;
 	const tag = kebabTriggers[2];
-	const hasTrigger = actor.getFlag(
-		'tokenwarp',
-		`tokenTriggers.${tag}`,
-	);
+	const hasTrigger = actor.getFlag('tokenwarp', `tokenTriggers.${tag}`);
 	if (hasTrigger) {
 		const macro = await fromUuid(hasTrigger);
 		return macro.execute(
@@ -2046,10 +2082,7 @@ export async function _executePreDeletion(tokenDocument, options, userId) {
 	const actor = tokenDocument?.actor;
 	if (!actor) return;
 	const tag = kebabTriggers[3];
-	const hasTrigger = actor.getFlag(
-		'tokenwarp',
-		`tokenTriggers.${tag}`,
-	);
+	const hasTrigger = actor.getFlag('tokenwarp', `tokenTriggers.${tag}`);
 	if (hasTrigger) {
 		const macro = await fromUuid(hasTrigger);
 		return macro.execute(
@@ -2069,10 +2102,7 @@ export async function _executePostDeletion(tokenDocument, options, userId) {
 	const actor = tokenDocument?.actor;
 	if (!actor) return;
 	const tag = kebabTriggers[4];
-	const hasTrigger = actor.getFlag(
-		'tokenwarp',
-		`tokenTriggers.${tag}`,
-	);
+	const hasTrigger = actor.getFlag('tokenwarp', `tokenTriggers.${tag}`);
 	if (hasTrigger) {
 		const macro = await fromUuid(hasTrigger);
 		return macro.execute(
@@ -2096,20 +2126,22 @@ export async function _executePreUpdateToken(
 	const actor = tokenDocument?.actor;
 	if (!actor) return;
 	const tag = kebabTriggers[5];
-	const hasTrigger = actor.getFlag(
-		'tokenwarp',
-		`tokenTriggers.${tag}`,
-	);
+	const hasTrigger = actor.getFlag('tokenwarp', `tokenTriggers.${tag}`);
 	if (hasTrigger) {
 		const macro = await fromUuid(hasTrigger);
-		return macro.execute(addLegacyMacroAliases({
-			token: tokenDocument,
-			actor,
-			data,
-			options,
-			tag,
-			...getMacroUserFields(userId),
-		}, 'preUpdateToken'));
+		return macro.execute(
+			addLegacyMacroAliases(
+				{
+					token: tokenDocument,
+					actor,
+					data,
+					options,
+					tag,
+					...getMacroUserFields(userId),
+				},
+				'preUpdateToken',
+			),
+		);
 	}
 }
 
@@ -2123,20 +2155,22 @@ export async function _executePostUpdateToken(
 	const actor = tokenDocument?.actor;
 	if (!actor) return;
 	const tag = kebabTriggers[6];
-	const hasTrigger = actor.getFlag(
-		'tokenwarp',
-		`tokenTriggers.${tag}`,
-	);
+	const hasTrigger = actor.getFlag('tokenwarp', `tokenTriggers.${tag}`);
 	if (hasTrigger) {
 		const macro = await fromUuid(hasTrigger);
-		return macro.execute(addLegacyMacroAliases({
-			token: tokenDocument,
-			actor,
-			data,
-			options,
-			tag,
-			...getMacroUserFields(userId),
-		}, 'updateToken'));
+		return macro.execute(
+			addLegacyMacroAliases(
+				{
+					token: tokenDocument,
+					actor,
+					data,
+					options,
+					tag,
+					...getMacroUserFields(userId),
+				},
+				'updateToken',
+			),
+		);
 	}
 }
 export async function _registerMovementHooks(
@@ -2201,20 +2235,23 @@ export async function _executeTokenMovementStart(
 	const actor = tokenDocument?.actor;
 	if (!actor) return;
 	const tag = kebabTriggers[7];
-	const hasTrigger = actor.getFlag(
-		'tokenwarp',
-		`tokenTriggers.${tag}`,
-	);
+	const hasTrigger = actor.getFlag('tokenwarp', `tokenTriggers.${tag}`);
 	if (hasTrigger) {
 		const macro = await fromUuid(hasTrigger);
-		return macro.execute(addLegacyMacroAliases({
-			token: tokenDocument,
-			actor,
-			move,
-			options,
-			tag,
-			...getMacroUserFields(userId),
-		}, 'tokenwarp.movementStart', 'move'));
+		return macro.execute(
+			addLegacyMacroAliases(
+				{
+					token: tokenDocument,
+					actor,
+					move,
+					options,
+					tag,
+					...getMacroUserFields(userId),
+				},
+				'tokenwarp.movementStart',
+				'move',
+			),
+		);
 	}
 }
 
@@ -2227,20 +2264,23 @@ export async function _executeTokenMovementStop(
 	const actor = tokenDocument?.actor;
 	if (!actor) return;
 	const tag = kebabTriggers[8];
-	const hasTrigger = actor.getFlag(
-		'tokenwarp',
-		`tokenTriggers.${tag}`,
-	);
+	const hasTrigger = actor.getFlag('tokenwarp', `tokenTriggers.${tag}`);
 	if (hasTrigger) {
 		const macro = await fromUuid(hasTrigger);
-		return macro.execute(addLegacyMacroAliases({
-			token: tokenDocument,
-			actor,
-			move,
-			options,
-			tag,
-			...getMacroUserFields(userId),
-		}, 'tokenwarp.movementStop', 'move'));
+		return macro.execute(
+			addLegacyMacroAliases(
+				{
+					token: tokenDocument,
+					actor,
+					move,
+					options,
+					tag,
+					...getMacroUserFields(userId),
+				},
+				'tokenwarp.movementStop',
+				'move',
+			),
+		);
 	}
 }
 
@@ -2255,13 +2295,18 @@ export async function _executePreUpdateActor(
 	let result;
 	if (hasTrigger) {
 		const macro = await fromUuid(hasTrigger);
-		result = await macro.execute(addLegacyMacroAliases({
-			actor: actorDocument,
-			data,
-			options,
-			tag,
-			...getMacroUserFields(userId),
-		}, 'preUpdateActor'));
+		result = await macro.execute(
+			addLegacyMacroAliases(
+				{
+					actor: actorDocument,
+					data,
+					options,
+					tag,
+					...getMacroUserFields(userId),
+				},
+				'preUpdateActor',
+			),
+		);
 	}
 	if (isHpZeroUpdate(actorDocument, data)) {
 		Hooks.callAll(
@@ -2287,13 +2332,18 @@ export async function _executePostUpdateActor(
 	const hasTrigger = actorDocument.getFlag('tokenwarp', `tokenTriggers.${tag}`);
 	if (hasTrigger) {
 		const macro = await fromUuid(hasTrigger);
-		await macro.execute(addLegacyMacroAliases({
-			actor: actorDocument,
-			data,
-			options,
-			tag,
-			...getMacroUserFields(userId),
-		}, 'updateActor'));
+		await macro.execute(
+			addLegacyMacroAliases(
+				{
+					actor: actorDocument,
+					data,
+					options,
+					tag,
+					...getMacroUserFields(userId),
+				},
+				'updateActor',
+			),
+		);
 	}
 	if (isHpZeroUpdate(actorDocument, data)) {
 		Hooks.callAll(
@@ -2322,13 +2372,18 @@ export async function _executePreActorHpZero(
 	);
 	if (hasTrigger) {
 		const macro = await fromUuid(hasTrigger);
-		return macro.execute(addLegacyMacroAliases({
-			actor: actorDocument,
-			data,
-			options,
-			tag: hookTag,
-			...getMacroUserFields(userId),
-		}, 'tokenwarp.preActorHpZero'));
+		return macro.execute(
+			addLegacyMacroAliases(
+				{
+					actor: actorDocument,
+					data,
+					options,
+					tag: hookTag,
+					...getMacroUserFields(userId),
+				},
+				'tokenwarp.preActorHpZero',
+			),
+		);
 	}
 }
 
@@ -2348,13 +2403,18 @@ export async function _executePostActorHpZero(
 	);
 	if (hasTrigger) {
 		const macro = await fromUuid(hasTrigger);
-		return macro.execute(addLegacyMacroAliases({
-			actor: actorDocument,
-			data,
-			options,
-			tag: hookTag,
-			...getMacroUserFields(userId),
-		}, 'tokenwarp.actorHpZero'));
+		return macro.execute(
+			addLegacyMacroAliases(
+				{
+					actor: actorDocument,
+					data,
+					options,
+					tag: hookTag,
+					...getMacroUserFields(userId),
+				},
+				'tokenwarp.actorHpZero',
+			),
+		);
 	}
 }
 
