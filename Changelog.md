@@ -1,7 +1,7 @@
 ## v14.365.2
 
-- Teleport-key movement now travels directly to its final destination without triggering regions it passes over or lands into.
-- Added a configurable Blink keybinding for teleporting while measuring movement distance; regions passed over are ignored, while the destination region is triggered.
+- Teleport-key (default: T) movement now travels directly to its final destination without triggering regions it passes over or lands into.
+- Added a configurable Blink keybinding (default: B) for teleporting while measuring movement distance; regions passed over are ignored, while the destination region is triggered.
 
 ## v14.365.1
 
