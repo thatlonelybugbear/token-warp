@@ -109,6 +109,7 @@ export function _preUpdateToken(tdoc, changes, options, userId) {
 		outOfBounds,
 		debug,
 		teleportKey,
+		blinkKey,
 	} = settings;
 
 	// Always stamp animation speed from actor override or world default.
@@ -119,13 +120,30 @@ export function _preUpdateToken(tdoc, changes, options, userId) {
 		(destination.x == origin.x && destination.y == origin.y) ||
 		options.animate == false ||
 		options.action === 'displace' ||
+		getMovementActionFromOptions(changes, options, tdoc) === 'displace' ||
 		options.tokenwarped == true
 	)
 		return true;
 	const isGM = game.users.get(userId)?.isGM ?? game.user?.isGM;
 	const token = tdoc.object;
-	const hasKey = isKeyPressed(teleportKey);
-	const shouldInstantTeleport = !!isGM && hasKey;
+	const teleportAction = !isGM
+		? null
+		: isKeyPressed(teleportKey)
+			? 'displace'
+			: isKeyPressed(blinkKey, 'blinkKey')
+				? 'blink'
+				: null;
+	const shouldInstantTeleport = teleportAction === 'displace';
+	if (
+		teleportAction &&
+		reissueTeleportMovement({
+			tdoc,
+			movement: changes,
+			options,
+			action: teleportAction,
+		})
+	)
+		return false;
 
 	const isMoveOutOfBounds =
 		outOfBounds && positionOutOfBounds({ destination, origin, tdoc });
@@ -139,7 +157,7 @@ export function _preUpdateToken(tdoc, changes, options, userId) {
 			origin,
 			isMoveOutOfBounds,
 			destination,
-			hasKey,
+			teleportAction,
 		});
 	const currentSegmentWaypoints = getCurrentSegmentWaypoints({
 		changes,
@@ -881,6 +899,41 @@ function getCurrentSegmentWaypoints({ changes, fallbackDestination }) {
 	}
 
 	return [];
+}
+
+function reissueTeleportMovement({ tdoc, movement, options, action }) {
+	const destination =
+		options?.movement?.[tdoc?.id]?.waypoints?.at(-1) ??
+		movement?.destination;
+	if (!destination || !tdoc?.id) return false;
+
+	const waypoint = foundry.utils.duplicate(destination);
+	waypoint.action = action;
+	waypoint.snapped = false;
+	waypoint.explicit = true;
+	waypoint.checkpoint = true;
+	const movementData = foundry.utils.duplicate(
+		options?.movement?.[tdoc.id] ?? {},
+	);
+	if (options?.constrainOptions) {
+		movementData.constrainOptions = foundry.utils.duplicate(
+			options.constrainOptions,
+		);
+	}
+	movementData.method ??= movement.method;
+	movementData.waypoints = [waypoint];
+
+	const updateOptions = {
+		movement: {
+			[tdoc.id]: movementData,
+		},
+		animate: false,
+		action: 'displace',
+		tokenwarped: true,
+	};
+	getMovementSpeed(movement, updateOptions, settings, tdoc, options);
+	tdoc.update({}, updateOptions);
+	return true;
 }
 
 function getRemainingPlannedWaypoints({ options, id, destination }) {

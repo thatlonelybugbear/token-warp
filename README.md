@@ -92,6 +92,8 @@ In the Token Warp Actor-sheet dialog there is a `Movement animation speed` tab.
 - If Core `Unconstrained movement` is disabled, `Walls block` has no extra effect.
 - `Disallow out of bounds movement` clamps movement to the nearest valid destination; it does not force no-animation by itself.
 - Keybinding `Disable Token Rotation Key` is per-user. While held, it temporarily suppresses movement auto-rotation.
+- Teleport-key movement ignores regions it passes over and lands in.
+- Blink-key movement ignores regions it passes over, but triggers behavior in the destination region.
 
 ## Leader Snake Follow (selected tokens)
 
