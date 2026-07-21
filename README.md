@@ -1,7 +1,7 @@
 # Token Warp
 
 ![Latest Version](https://img.shields.io/badge/dynamic/json.svg?url=https://raw.githubusercontent.com/thatlonelybugbear/token-warp/main/module.json&label=Token%20Warp%20Version&query=$.version&colorB=yellow&style=for-the-badge)
-![Foundry Core Compatible Version](https://img.shields.io/badge/dynamic/json.svg?url=https://raw.githubusercontent.com/thatlonelybugbear/token-warp/main/module.json&label=Foundry%20Version&query=$.compatibility.minimum&colorB=ff6400&style=for-the-badge)
+![Foundry Core Compatible Version](https://img.shields.io/badge/dynamic/json.svg?url=https://raw.githubusercontent.com/thatlonelybugbear/token-warp/v13/module.json&label=Foundry%20Version&query=$.compatibility.minimum&colorB=ff6400&style=for-the-badge)
 ![Foundry Core Compatible Version](https://img.shields.io/badge/dynamic/json.svg?url=https://raw.githubusercontent.com/thatlonelybugbear/token-warp/main/module.json&label=Foundry%20Version&query=$.compatibility.verified&colorB=ff6400&style=for-the-badge)
 ![Total Download Count](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/thatlonelybugbear/token-warp/badge-data/badge/total-downloads.json&style=for-the-badge)
 ![Latest Release Download Count](https://img.shields.io/badge/dynamic/json?url=https://api.github.com/repos/thatlonelybugbear/token-warp/releases/latest&query=$.assets[1].download_count&label=LATEST%20DOWNLOADS&color=2b82fc&style=for-the-badge)
