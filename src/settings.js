@@ -8,6 +8,8 @@ export default class Settings {
 	static DEFAULT_OUT_OF_BOUNDS_BEHAVIOUR = 'outOfBoundsCheck';
 	static TELEPORT_KEYBIND = 'teleportKey';
 	static DISABLE_ROTATION_KEYBIND = 'disableRotationKey';
+	static CONTINUOUS_KEYBOARD_MOVEMENT_KEYBIND =
+		'continuousKeyboardMovementKeybind';
 	static DEBUG = 'debug';
 
 	registerSettings() {
@@ -79,6 +81,7 @@ export default class Settings {
 			config: false,
 			type: Boolean,
 		});
+
 	}
 
 	_registerKeybindings() {
@@ -96,6 +99,14 @@ export default class Settings {
 				restricted: false,
 			},
 		);
+		game.keybindings.register(
+			Constants.MODULE_ID,
+			Settings.CONTINUOUS_KEYBOARD_MOVEMENT_KEYBIND,
+			{
+				name: 'TOKENWARP.ContinuousKeyboardMovementKeybindName',
+				editable: [{ key: 'ControlLeft' }, { key: 'ControlRight' }],
+			},
+		);
 	}
 
 	get teleportKey() {
@@ -110,6 +121,13 @@ export default class Settings {
 			Constants.MODULE_ID,
 			Settings.DISABLE_ROTATION_KEYBIND,
 		)[0]?.key;
+	}
+
+	get continuousKeyboardMovementKey() {
+		return game.keybindings.get(
+			Constants.MODULE_ID,
+			Settings.CONTINUOUS_KEYBOARD_MOVEMENT_KEYBIND,
+		);
 	}
 
 	get movementSwitch() {

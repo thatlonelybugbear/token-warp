@@ -21,6 +21,9 @@ const name = Constants.MODULE_NAME;
 const WALLBLOCK_NO_ANIMATION_ONCE = new WeakMap();
 const MOVEMENT_ANIMATION_FLAG_MIGRATIONS = new WeakSet();
 const LEGACY_HOOK_ARG_WARNINGS = new Set();
+let continuousKeyboardMovementTimer = null;
+let continuousKeyboardMovementStart = null;
+let continuousKeyboardMovementPending = false;
 const triggers = [
 	'All hooks',
 	'Pre token creation',
@@ -259,6 +262,118 @@ export function _preMoveToken(tokenDocument, move, options) {
 		move.autoRotate = false;
 	}
 	return _preUpdateToken(tokenDocument, move, options, movementUserId);
+}
+
+export function enableContinuousKeyboardMovement() {
+	const movementActions = {
+		moveUp: [CONST.MOVEMENT_DIRECTIONS.UP],
+		moveLeft: [CONST.MOVEMENT_DIRECTIONS.LEFT],
+		moveDown: [CONST.MOVEMENT_DIRECTIONS.DOWN],
+		moveRight: [CONST.MOVEMENT_DIRECTIONS.RIGHT],
+		moveUpLeft: [
+			CONST.MOVEMENT_DIRECTIONS.UP,
+			CONST.MOVEMENT_DIRECTIONS.LEFT,
+		],
+		moveUpRight: [
+			CONST.MOVEMENT_DIRECTIONS.UP,
+			CONST.MOVEMENT_DIRECTIONS.RIGHT,
+		],
+		moveDownLeft: [
+			CONST.MOVEMENT_DIRECTIONS.DOWN,
+			CONST.MOVEMENT_DIRECTIONS.LEFT,
+		],
+		moveDownRight: [
+			CONST.MOVEMENT_DIRECTIONS.DOWN,
+			CONST.MOVEMENT_DIRECTIONS.RIGHT,
+		],
+	};
+	const movementKeys = new Map();
+	for (const [action, directions] of Object.entries(movementActions)) {
+		for (const binding of game.keybindings.get('core', action)) {
+			movementKeys.set(binding.key, directions);
+		}
+	}
+	const activeDirections = new Set();
+
+	const stop = () => {
+		if (continuousKeyboardMovementStart !== null) {
+			clearTimeout(continuousKeyboardMovementStart);
+			continuousKeyboardMovementStart = null;
+		}
+		if (continuousKeyboardMovementTimer === null) return;
+		clearInterval(continuousKeyboardMovementTimer);
+		continuousKeyboardMovementTimer = null;
+	};
+
+	const move = async () => {
+		if (
+			continuousKeyboardMovementPending ||
+			!isKeyPressed(
+				settings.continuousKeyboardMovementKey,
+				'continuousKeyboardMovementKeybind',
+			) ||
+			canvas.activeLayer !== canvas.tokens
+		)
+			return stop();
+
+		let moveKeys = activeDirections;
+		if (!moveKeys.size) return stop();
+		if (
+			canvas.grid.type === CONST.GRID_TYPES.SQUARE &&
+			canvas.grid.diagonals === CONST.GRID_DIAGONALS.ILLEGAL
+		) {
+			moveKeys = new Set(Array.from(moveKeys).slice(-1));
+		}
+
+		const dx =
+			Number(moveKeys.has(CONST.MOVEMENT_DIRECTIONS.RIGHT)) -
+			Number(moveKeys.has(CONST.MOVEMENT_DIRECTIONS.LEFT));
+		const dy =
+			Number(moveKeys.has(CONST.MOVEMENT_DIRECTIONS.DOWN)) -
+			Number(moveKeys.has(CONST.MOVEMENT_DIRECTIONS.UP));
+		if (!dx && !dy) return;
+
+		continuousKeyboardMovementPending = true;
+		try {
+			await canvas.tokens.moveMany({ dx, dy });
+		} finally {
+			continuousKeyboardMovementPending = false;
+		}
+	};
+
+	window.addEventListener(
+		'keydown',
+		(event) => {
+			const directions = movementKeys.get(event.code);
+			if (
+				!directions ||
+				!isKeyPressed(
+					settings.continuousKeyboardMovementKey,
+					'continuousKeyboardMovementKeybind',
+				) ||
+				canvas.activeLayer !== canvas.tokens
+			)
+				return;
+			event.preventDefault();
+			event.stopImmediatePropagation();
+			if (event.repeat) return;
+			for (const direction of directions) activeDirections.add(direction);
+			stop();
+			continuousKeyboardMovementStart = setTimeout(() => {
+				continuousKeyboardMovementStart = null;
+				if (!activeDirections.size) return;
+				move();
+				continuousKeyboardMovementTimer = setInterval(move, 100);
+			}, 50);
+		},
+		true,
+	);
+	window.addEventListener('keyup', (event) => {
+		const directions = movementKeys.get(event.code);
+		if (!directions) return;
+		for (const direction of directions) activeDirections.delete(direction);
+		if (!activeDirections.size) stop();
+	});
 }
 
 function getLeaderFlagState(tokenDocument) {

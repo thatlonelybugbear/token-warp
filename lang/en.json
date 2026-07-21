@@ -17,6 +17,7 @@
 	"TOKENWARP.WarnMultipleRulersActive": "Token Warp: Please use either Elevation Ruler or Drag Ruler modules. Both are currently enabled",
 	"TOKENWARP.TeleportKeybindName": "Teleport Key for GMs",
 	"TOKENWARP.DisableRotationKeybindName": "Disable Token Rotation Key",
+	"TOKENWARP.ContinuousKeyboardMovementKeybindName": "Continuous keyboard token movement modifier",
 	"TOKENWARP.PresetSpawn": "Spawn",
 	"TOKENWARP.PresetSummon": "Spawn",
 	"TOKENWARP.PresetDespawn": "Despawn",
