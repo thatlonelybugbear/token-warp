@@ -9,6 +9,6 @@ releases/
 *.zip
 *.tar.gz
 
-# Local handoff notes (do not sync)
-SESSION_NOTES.md
+# Local only files (do not sync)
+DEV_CHANGELOG.md
 TODO.md

@@ -7,6 +7,7 @@ export default class Settings {
 	static DEFAULT_TOKEN_ANIMATION_SPEED = 'defaultTokenAnimationSpeed';
 	static DEFAULT_OUT_OF_BOUNDS_BEHAVIOUR = 'outOfBoundsCheck';
 	static TELEPORT_KEYBIND = 'teleportKey';
+	static BLINK_KEYBIND = 'blinkKey';
 	static DISABLE_ROTATION_KEYBIND = 'disableRotationKey';
 	static CONTINUOUS_KEYBOARD_MOVEMENT_KEYBIND =
 		'continuousKeyboardMovementKeybind';
@@ -90,6 +91,11 @@ export default class Settings {
 			editable: [{ key: 'KeyQ' }],
 			restricted: true,
 		});
+		game.keybindings.register(Constants.MODULE_ID, Settings.BLINK_KEYBIND, {
+			name: 'TOKENWARP.BlinkKeybindName',
+			editable: [{ key: 'KeyB' }],
+			restricted: true,
+		});
 		game.keybindings.register(
 			Constants.MODULE_ID,
 			Settings.DISABLE_ROTATION_KEYBIND,
@@ -114,6 +120,11 @@ export default class Settings {
 			Constants.MODULE_ID,
 			Settings.TELEPORT_KEYBIND,
 		)[0]?.key;
+	}
+
+	get blinkKey() {
+		return game.keybindings.get(Constants.MODULE_ID, Settings.BLINK_KEYBIND)[0]
+			?.key;
 	}
 
 	get disableRotationKey() {
