@@ -1,3 +1,7 @@
+## v14.365.1
+
+- Added a configurable Ctrl modifier keybinding for continuous keyboard token movement.
+
 ## v14.364.1
 
 - Updated minimum and verified Foundry compatibility to v14.364.

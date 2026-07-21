@@ -22,6 +22,7 @@ Hooks.once('ready', async () => {
 	const module = game.modules.get(Constants.MODULE_ID);
 	if (module) module.api = api;
 	Hooks.callAll('tokenwarp.ready', api);
+	tokenwarp.enableContinuousKeyboardMovement();
 
 	Hooks.on('preMoveToken', tokenwarp._preMoveToken);
 	Hooks.on('preCreateToken', tokenwarp._executePreCreation);
