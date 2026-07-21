@@ -1,6 +1,7 @@
 ## v14.365.1
 
 - Added a configurable Ctrl modifier keybinding for continuous keyboard token movement.
+  - Hold Ctrl while using the keyboard keys to move selected tokens continuously, without the usual delay before movement repeats.
 
 ## v14.364.1
 
