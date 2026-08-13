@@ -11,6 +11,7 @@ export default class Settings {
 	static DISABLE_ROTATION_KEYBIND = 'disableRotationKey';
 	static CONTINUOUS_KEYBOARD_MOVEMENT_KEYBIND =
 		'continuousKeyboardMovementKeybind';
+	static CONTINUOUS_KEYBOARD_MOVEMENT = 'continuousKeyboardMovement';
 	static DEBUG = 'debug';
 
 	registerSettings() {
@@ -83,6 +84,27 @@ export default class Settings {
 			type: Boolean,
 		});
 
+		game.settings.register(
+			Constants.MODULE_ID,
+			Settings.CONTINUOUS_KEYBOARD_MOVEMENT,
+			{
+				name: 'TOKENWARP.ContinuousKeyboardMovementName',
+				hint: 'TOKENWARP.ContinuousKeyboardMovementHint',
+				scope: 'client',
+				config: true,
+				default: false,
+				type: Boolean,
+				onChange: (enabled) =>
+					ui.notifications.info(
+						game.i18n.localize(
+							enabled
+								? 'TOKENWARP.ContinuousKeyboardMovementEnabled'
+								: 'TOKENWARP.ContinuousKeyboardMovementDisabled',
+						),
+					),
+			},
+		);
+
 	}
 
 	_registerKeybindings() {
@@ -110,7 +132,13 @@ export default class Settings {
 			Settings.CONTINUOUS_KEYBOARD_MOVEMENT_KEYBIND,
 			{
 				name: 'TOKENWARP.ContinuousKeyboardMovementKeybindName',
-				editable: [{ key: 'ControlLeft' }, { key: 'ControlRight' }],
+				editable: [{ key: 'KeyM', modifiers: ['Shift'] }],
+				onDown: () =>
+					game.settings.set(
+						Constants.MODULE_ID,
+						Settings.CONTINUOUS_KEYBOARD_MOVEMENT,
+						!this.continuousKeyboardMovement,
+					),
 			},
 		);
 	}
@@ -134,10 +162,11 @@ export default class Settings {
 		)[0]?.key;
 	}
 
-	get continuousKeyboardMovementKey() {
-		return game.keybindings.get(
+
+	get continuousKeyboardMovement() {
+		return game.settings.get(
 			Constants.MODULE_ID,
-			Settings.CONTINUOUS_KEYBOARD_MOVEMENT_KEYBIND,
+			Settings.CONTINUOUS_KEYBOARD_MOVEMENT,
 		);
 	}
 

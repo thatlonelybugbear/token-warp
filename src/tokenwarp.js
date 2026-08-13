@@ -326,10 +326,7 @@ export function enableContinuousKeyboardMovement() {
 	const move = async () => {
 		if (
 			continuousKeyboardMovementPending ||
-			!isKeyPressed(
-				settings.continuousKeyboardMovementKey,
-				'continuousKeyboardMovementKeybind',
-			) ||
+			!settings.continuousKeyboardMovement ||
 			canvas.activeLayer !== canvas.tokens
 		)
 			return stop();
@@ -362,13 +359,11 @@ export function enableContinuousKeyboardMovement() {
 	window.addEventListener(
 		'keydown',
 		(event) => {
+			if (event.target.closest('input, textarea, select, [contenteditable="true"]')) return;
 			const directions = movementKeys.get(event.code);
 			if (
 				!directions ||
-				!isKeyPressed(
-					settings.continuousKeyboardMovementKey,
-					'continuousKeyboardMovementKeybind',
-				) ||
+				!settings.continuousKeyboardMovement ||
 				canvas.activeLayer !== canvas.tokens
 			)
 				return;
