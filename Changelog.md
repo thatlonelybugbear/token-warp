@@ -1,3 +1,10 @@
+## v14.365.3
+
+- Added continuous keyboard token movement as an optional default setting.
+  - Toggle it at any time with the configurable shortcut (default: Left Shift + M).
+  - Token Warp now confirms when continuous movement is enabled or disabled.
+- Fixed continuous keyboard movement activating while typing in text fields.
+
 ## v14.365.2
 
 - Teleport-key (default: T) movement now travels directly to its final destination without triggering regions it passes over or lands into.
