@@ -12,6 +12,8 @@ export default class Settings {
 	static CONTINUOUS_KEYBOARD_MOVEMENT_KEYBIND =
 		'continuousKeyboardMovementKeybind';
 	static CONTINUOUS_KEYBOARD_MOVEMENT = 'continuousKeyboardMovement';
+	static CENTER_VIEWPORT_ON_MOVEMENT = 'centerViewportOnMovement';
+	static CENTER_VIEWPORT_ON_MOVEMENT_KEYBIND = 'centerViewportOnMovementKeybind';
 	static DEBUG = 'debug';
 
 	registerSettings() {
@@ -104,6 +106,26 @@ export default class Settings {
 					),
 			},
 		);
+		game.settings.register(
+			Constants.MODULE_ID,
+			Settings.CENTER_VIEWPORT_ON_MOVEMENT,
+			{
+				name: 'TOKENWARP.CenterViewportOnMovementName',
+				hint: 'TOKENWARP.CenterViewportOnMovementHint',
+				scope: 'client',
+				config: true,
+				default: false,
+				type: Boolean,
+				onChange: (enabled) =>
+					ui.notifications.info(
+						game.i18n.localize(
+							enabled
+								? 'TOKENWARP.CenterViewportOnMovementEnabled'
+								: 'TOKENWARP.CenterViewportOnMovementDisabled',
+						),
+					),
+			},
+		);
 
 	}
 
@@ -141,6 +163,20 @@ export default class Settings {
 					),
 			},
 		);
+		game.keybindings.register(
+			Constants.MODULE_ID,
+			Settings.CENTER_VIEWPORT_ON_MOVEMENT_KEYBIND,
+			{
+				name: 'TOKENWARP.CenterViewportOnMovementKeybindName',
+				editable: [{ key: 'KeyP', modifiers: ['Shift'] }],
+				onDown: () =>
+					game.settings.set(
+						Constants.MODULE_ID,
+						Settings.CENTER_VIEWPORT_ON_MOVEMENT,
+						!this.centerViewportOnMovement,
+					),
+			},
+		);
 	}
 
 	get teleportKey() {
@@ -167,6 +203,13 @@ export default class Settings {
 		return game.settings.get(
 			Constants.MODULE_ID,
 			Settings.CONTINUOUS_KEYBOARD_MOVEMENT,
+		);
+	}
+
+	get centerViewportOnMovement() {
+		return game.settings.get(
+			Constants.MODULE_ID,
+			Settings.CENTER_VIEWPORT_ON_MOVEMENT,
 		);
 	}
 

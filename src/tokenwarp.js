@@ -2357,12 +2357,21 @@ export async function _registerMovementHooks(
 		tagStart,
 	);
 
+	const token = tokenDocument?.object;
+	let animationFrame;
+	const followViewport = () => {
+		if (!settings.centerViewportOnMovement || !token) return;
+		canvas.pan(token.center);
+		animationFrame = requestAnimationFrame(followViewport);
+	};
+	followViewport();
+
 	const movementAnimationPromise =
-		tokenDocument?.object?.movementAnimationPromise ??
-		tokenDocument?.movementAnimationPromise;
+		token?.movementAnimationPromise ?? tokenDocument?.movementAnimationPromise;
 	try {
 		if (movementAnimationPromise?.then) await movementAnimationPromise;
 	} finally {
+		if (animationFrame) cancelAnimationFrame(animationFrame);
 		Hooks.callAll(
 			`tokenwarp.movementStop`,
 			tokenDocument,
