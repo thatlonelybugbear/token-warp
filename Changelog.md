@@ -1,3 +1,7 @@
+## v14.365.4.1
+
+- Improved continuous keyboard movement reliability, including smoother diagonal movement for larger tokens.
+
 ## v14.365.4
 
 - Added an optional setting to keep the viewport centered on a moving token.
