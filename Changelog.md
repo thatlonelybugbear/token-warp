@@ -1,3 +1,8 @@
+## v14.365.4
+
+- Added an optional setting to keep the viewport centered on a moving token.
+  - Toggle it at any time with the configurable shortcut (default: Shift + P).
+
 ## v14.365.3
 
 - Added continuous keyboard token movement as an optional default setting.
