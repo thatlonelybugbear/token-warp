@@ -311,9 +311,10 @@ export function enableContinuousKeyboardMovement() {
 			movementKeys.set(binding.key, directions);
 		}
 	}
-	const activeDirections = new Set();
+	const activeMovementKeys = new Set();
 
-	const stop = () => {
+	const stop = (clearKeys = false) => {
+		if (clearKeys) activeMovementKeys.clear();
 		if (continuousKeyboardMovementStart !== null) {
 			clearTimeout(continuousKeyboardMovementStart);
 			continuousKeyboardMovementStart = null;
@@ -329,9 +330,13 @@ export function enableContinuousKeyboardMovement() {
 			!settings.continuousKeyboardMovement ||
 			canvas.activeLayer !== canvas.tokens
 		)
-			return stop();
+			return stop(true);
 
-		let moveKeys = activeDirections;
+		let moveKeys = new Set(
+			Array.from(activeMovementKeys).flatMap(
+				(key) => movementKeys.get(key) ?? [],
+			),
+		);
 		if (!moveKeys.size) return stop();
 		if (
 			canvas.grid.type === CONST.GRID_TYPES.SQUARE &&
@@ -350,7 +355,22 @@ export function enableContinuousKeyboardMovement() {
 
 		continuousKeyboardMovementPending = true;
 		try {
-			await canvas.tokens.moveMany({ dx, dy });
+			const objects = canvas.tokens._getMovableObjects();
+			const [updates, options = {}] =
+				canvas.tokens._prepareKeyboardMovementUpdates(objects, dx, dy, 0);
+			if (canvas.grid.type === CONST.GRID_TYPES.SQUARE) {
+				for (const object of objects) {
+					const waypoint = options.movement?.[object.id]?.waypoints?.[0];
+					if (!waypoint) continue;
+					if (dx && !dy) waypoint.y = object.document._source.y;
+					if (dy && !dx) waypoint.x = object.document._source.x;
+				}
+			}
+			await canvas.scene.updateEmbeddedDocuments(
+				canvas.tokens.constructor.documentName,
+				updates,
+				options,
+			);
 		} finally {
 			continuousKeyboardMovementPending = false;
 		}
@@ -369,12 +389,13 @@ export function enableContinuousKeyboardMovement() {
 				return;
 			event.preventDefault();
 			event.stopImmediatePropagation();
+			game.keyboard.moveKeys.clear();
 			if (event.repeat) return;
-			for (const direction of directions) activeDirections.add(direction);
+			activeMovementKeys.add(event.code);
 			stop();
 			continuousKeyboardMovementStart = setTimeout(() => {
 				continuousKeyboardMovementStart = null;
-				if (!activeDirections.size) return;
+				if (!activeMovementKeys.size) return;
 				move();
 				continuousKeyboardMovementTimer = setInterval(move, 100);
 			}, 50);
@@ -382,10 +403,14 @@ export function enableContinuousKeyboardMovement() {
 		true,
 	);
 	window.addEventListener('keyup', (event) => {
-		const directions = movementKeys.get(event.code);
-		if (!directions) return;
-		for (const direction of directions) activeDirections.delete(direction);
-		if (!activeDirections.size) stop();
+		if (!movementKeys.has(event.code)) return;
+		game.keyboard.moveKeys.clear();
+		activeMovementKeys.delete(event.code);
+		if (!activeMovementKeys.size) stop();
+	}, true);
+	window.addEventListener('blur', () => stop(true));
+	document.addEventListener('visibilitychange', () => {
+		if (document.hidden) stop(true);
 	});
 }
 
